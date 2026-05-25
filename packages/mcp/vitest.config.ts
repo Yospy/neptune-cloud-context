@@ -1,0 +1,11 @@
+import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    alias: {
+      "neptune-context": resolve(__dirname, "../sdk/src/index.ts"),
+      "neptune-context-shared": resolve(__dirname, "../shared/src/index.ts")
+    }
+  }
+});

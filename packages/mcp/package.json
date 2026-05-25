@@ -1,0 +1,33 @@
+{
+  "name": "neptune-context-mcp",
+  "version": "0.1.4",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "neptune-context-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prebuild": "corepack pnpm --filter neptune-context build",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "neptune-context": "workspace:^",
+    "neptune-context-shared": "workspace:^",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

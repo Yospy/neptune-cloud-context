@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "neptune-context-shared": ["../shared/src/index.ts"]
+    },
+    "types": ["node", "vitest/globals"],
+    "noEmit": true
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}
