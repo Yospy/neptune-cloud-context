@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "neptune-context-shared": "workspace:*",
-    "@hono/node-server": "^1.13.8",
+    "@hono/node-server": "^2.0.4",
     "@supabase/supabase-js": "^2.48.1",
     "dotenv": "^16.4.7",
     "hono": "^4.6.17",
