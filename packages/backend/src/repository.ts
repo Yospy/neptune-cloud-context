@@ -18,6 +18,7 @@ import type {
   Priority,
   RelevantContextQuery,
   ResolveContextRequest,
+  UploadReceipt,
   UploadReceiptResponse,
   UserProfile,
   Workstream
@@ -101,12 +102,31 @@ type UserProfileRow = {
   updated_at: string;
 };
 
+type ContextVersionRow = {
+  context_id: string;
+  version: number;
+  created_by: string;
+};
+
 type ProjectRow = {
   id: string;
   org_id: string;
   slug: string;
   name: string;
   created_at: string;
+};
+
+type RawUploadReceipt = Omit<UploadReceipt, "created_by_user" | "updated_by_user">;
+
+type RawUploadReceiptResponse = {
+  ok: true;
+  changed: boolean;
+  receipt: RawUploadReceipt;
+};
+
+type ContextAttribution = {
+  created_by_user: UserProfile;
+  updated_by_user: UserProfile;
 };
 
 type OrgRow = {
@@ -156,7 +176,7 @@ function raiseOnError(error: DbError | null, fallbackMessage: string): void {
   throw new AppError("INTERNAL_ERROR", fallbackMessage);
 }
 
-function contextSummary(row: ContextRow): ContextSummary {
+function contextSummary(row: ContextRow, attribution: ContextAttribution): ContextSummary {
   return {
     id: row.id,
     title: row.title,
@@ -170,13 +190,15 @@ function contextSummary(row: ContextRow): ContextSummary {
     status: row.status,
     updated_at: row.updated_at,
     version: row.version,
-    content_hash: row.content_hash
+    content_hash: row.content_hash,
+    created_by_user: attribution.created_by_user,
+    updated_by_user: attribution.updated_by_user
   };
 }
 
-function contextRecord(row: ContextRow): ContextRecord {
+function contextRecord(row: ContextRow, attribution: ContextAttribution): ContextRecord {
   return {
-    ...contextSummary(row),
+    ...contextSummary(row, attribution),
     content_md: row.content_md,
     created_at: row.created_at,
     repo_paths: row.repo_paths,
@@ -198,13 +220,13 @@ function userProfile(row: UserProfileRow): UserProfile {
   };
 }
 
-function isUploadReceiptResponse(value: unknown): value is UploadReceiptResponse {
+function isRawUploadReceiptResponse(value: unknown): value is RawUploadReceiptResponse {
   return (
     typeof value === "object" &&
     value !== null &&
-    (value as UploadReceiptResponse).ok === true &&
-    typeof (value as UploadReceiptResponse).changed === "boolean" &&
-    typeof (value as UploadReceiptResponse).receipt?.context_id === "string"
+    (value as RawUploadReceiptResponse).ok === true &&
+    typeof (value as RawUploadReceiptResponse).changed === "boolean" &&
+    typeof (value as RawUploadReceiptResponse).receipt?.context_id === "string"
   );
 }
 
@@ -429,11 +451,11 @@ export class SupabaseContextRepository implements ContextRepository {
 
     raiseOnError(error, "Failed to create context.");
 
-    if (!isUploadReceiptResponse(data)) {
+    if (!isRawUploadReceiptResponse(data)) {
       throw new AppError("INTERNAL_ERROR", "Invalid context receipt from database.");
     }
 
-    return data;
+    return this.enrichUploadReceipt(data);
   }
 
   async listRelevantContext(
@@ -475,13 +497,17 @@ export class SupabaseContextRepository implements ContextRepository {
       rows = rows.filter((row) => !readContextIds.has(row.id));
     }
 
-    return rows.slice(0, query.limit).map(contextSummary);
+    const limitedRows = rows.slice(0, query.limit);
+    const attribution = await this.getContextAttribution(limitedRows);
+
+    return limitedRows.map((row) => contextSummary(row, this.requireAttribution(row, attribution)));
   }
 
   async getContext(contextId: string, user: AuthenticatedUser): Promise<ContextRecord> {
     const row = await this.getContextRow(contextId);
     await this.getOrgProjectForMember(row.project_id, user.id);
-    return contextRecord(row);
+    const attribution = await this.getContextAttribution([row]);
+    return contextRecord(row, this.requireAttribution(row, attribution));
   }
 
   async markContextRead(
@@ -639,6 +665,97 @@ export class SupabaseContextRepository implements ContextRepository {
     raiseOnError(error, "Failed to load user profiles.");
 
     return new Map((data ?? []).map((row) => [row.id, userProfile(row)]));
+  }
+
+  private async enrichUploadReceipt(
+    response: RawUploadReceiptResponse
+  ): Promise<UploadReceiptResponse> {
+    const row = await this.getContextRow(response.receipt.context_id);
+    const attribution = this.requireAttribution(row, await this.getContextAttribution([row]));
+
+    return {
+      ...response,
+      receipt: {
+        ...response.receipt,
+        created_by_user: attribution.created_by_user,
+        updated_by_user: attribution.updated_by_user
+      }
+    };
+  }
+
+  private async getContextAttribution(
+    rows: ContextRow[]
+  ): Promise<Map<string, ContextAttribution>> {
+    if (rows.length === 0) {
+      return new Map();
+    }
+
+    const { data: versions, error } = (await table<any>(this.client, "context_versions")
+      .select("context_id, version, created_by")
+      .in(
+        "context_id",
+        rows.map((row) => row.id)
+      )) as QueryResult<ContextVersionRow[]>;
+
+    raiseOnError(error, "Failed to load context versions.");
+
+    const versionActorByContext = new Map(
+      (versions ?? []).map((version) => [
+        `${version.context_id}:${version.version}`,
+        version.created_by
+      ])
+    );
+
+    const updatedByByContext = new Map(
+      rows.map((row) => [row.id, this.updatedByUserId(row, versionActorByContext)])
+    );
+    const userIds = [
+      ...new Set([
+        ...rows.map((row) => row.created_by),
+        ...rows.map((row) => updatedByByContext.get(row.id) ?? row.created_by)
+      ])
+    ];
+    const profiles = await this.getUserProfiles(userIds);
+
+    return new Map(
+      rows.map((row) => {
+        const updatedBy = updatedByByContext.get(row.id) ?? row.created_by;
+        return [
+          row.id,
+          {
+            created_by_user: profiles.get(row.created_by) ?? this.missingProfile(row.created_by),
+            updated_by_user: profiles.get(updatedBy) ?? this.missingProfile(updatedBy)
+          }
+        ];
+      })
+    );
+  }
+
+  private updatedByUserId(row: ContextRow, versionActorByContext: Map<string, string>) {
+    const currentVersionActor = versionActorByContext.get(`${row.id}:${row.version}`);
+    if (currentVersionActor) {
+      return currentVersionActor;
+    }
+
+    if (row.version === 1) {
+      return row.created_by;
+    }
+
+    throw new AppError(
+      "INTERNAL_ERROR",
+      `Context version attribution not found for ${row.id} v${row.version}.`
+    );
+  }
+
+  private requireAttribution(
+    row: ContextRow,
+    attribution: Map<string, ContextAttribution>
+  ): ContextAttribution {
+    const value = attribution.get(row.id);
+    if (!value) {
+      throw new AppError("INTERNAL_ERROR", `Context attribution not found for ${row.id}.`);
+    }
+    return value;
   }
 
   private missingProfile(userId?: string): UserProfile {

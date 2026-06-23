@@ -105,5 +105,6 @@ export type AppVariables = {
   logger: Logger;
   requestId: string;
   errorCode?: ErrorCode;
+  rateLimitRules?: Set<string>;
   user: AuthenticatedUser;
 };

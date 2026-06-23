@@ -6,6 +6,7 @@ import {
   requireProjectBinding as sdkRequireProjectBinding
 } from "neptune-context";
 import {
+  contextPayloadLimits,
   contextTypeValues,
   priorityValues,
   workstreamValues
@@ -43,8 +44,11 @@ const workstreamSchema = z.enum(workstreamValues);
 const contextTypeSchema = z.enum(contextTypeValues);
 const prioritySchema = z.enum(priorityValues);
 const uuidSchema = z.string().uuid();
-const stringListSchema = z.array(z.string().trim().min(1)).default([]);
 const cwdSchema = z.string().trim().min(1).optional();
+
+function stringListSchema(maxItems: number, maxItemLength: number) {
+  return z.array(z.string().trim().min(1).max(maxItemLength)).max(maxItems).default([]);
+}
 
 function resolveContext(deps: NeptuneToolDeps = {}): ToolContext {
   return {
@@ -100,20 +104,32 @@ function errorResult(error: unknown): CallToolResult {
 
 const createContextSchema = z.object({
   project_id: uuidSchema,
-  title: z.string().trim().min(1).max(160),
-  summary: z.string().trim().min(1).max(500),
-  content_md: z.string().trim().min(1),
+  title: z.string().trim().min(1).max(contextPayloadLimits.titleMax),
+  summary: z.string().trim().min(1).max(contextPayloadLimits.summaryMax),
+  content_md: z.string().trim().min(1).max(contextPayloadLimits.contentMdMax),
   source_workstream: workstreamSchema,
-  target_workstreams: z.array(workstreamSchema).min(1),
-  domain: z.string().trim().min(1).max(80),
-  code_areas: stringListSchema,
+  target_workstreams: z
+    .array(workstreamSchema)
+    .min(1)
+    .max(contextPayloadLimits.targetWorkstreamsMax),
+  domain: z.string().trim().min(1).max(contextPayloadLimits.domainMax),
+  code_areas: stringListSchema(
+    contextPayloadLimits.codeAreasMax,
+    contextPayloadLimits.codeAreaMax
+  ),
   context_type: contextTypeSchema,
   priority: prioritySchema.default("normal"),
-  tags: stringListSchema,
-  repo_paths: stringListSchema,
-  related_files: stringListSchema,
+  tags: stringListSchema(contextPayloadLimits.tagsMax, contextPayloadLimits.tagMax),
+  repo_paths: stringListSchema(
+    contextPayloadLimits.repoPathsMax,
+    contextPayloadLimits.repoPathMax
+  ),
+  related_files: stringListSchema(
+    contextPayloadLimits.relatedFilesMax,
+    contextPayloadLimits.relatedFileMax
+  ),
   confidence_score: z.number().min(0).max(1).optional(),
-  inference_notes: z.string().trim().optional()
+  inference_notes: z.string().trim().max(contextPayloadLimits.inferenceNotesMax).optional()
 });
 
 export const toolDefinitions: ToolDefinition[] = [

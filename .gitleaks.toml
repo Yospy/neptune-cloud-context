@@ -1,0 +1,45 @@
+title = "Neptune secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "neptune-supabase-service-role-key"
+description = "Supabase service role key assignment"
+regex = '''(?i)\bSUPABASE_SERVICE_ROLE_KEY\b\s*[:=]\s*['"]?(eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|sb_secret_[A-Za-z0-9_=-]{20,}|[A-Za-z0-9_+/=-]{80,})['"]?'''
+secretGroup = 1
+keywords = ["SUPABASE_SERVICE_ROLE_KEY"]
+tags = ["neptune", "supabase", "service-role"]
+
+[[rules]]
+id = "neptune-supabase-jwt"
+description = "Supabase JWT-like token"
+regex = '''\b(eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b'''
+secretGroup = 1
+keywords = ["eyJ"]
+tags = ["neptune", "supabase", "jwt"]
+
+[[rules]]
+id = "neptune-local-config-auth-token"
+description = "Committed Neptune local auth config token"
+path = '''(^|/)\.(neptune|agentctx)/config\.json$'''
+regex = '''(?m)"(?:accessToken|refreshToken)"\s*:\s*"([^"]{16,})"'''
+secretGroup = 1
+keywords = ["accessToken", "refreshToken"]
+tags = ["neptune", "local-config"]
+
+[[rules]]
+id = "neptune-local-config-token"
+description = "Neptune local config token value"
+regex = '''(?i)"(?:accessToken|refreshToken)"\s*:\s*"((?:eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})|[A-Za-z0-9_./+=-]{80,})"'''
+secretGroup = 1
+keywords = ["accessToken", "refreshToken"]
+tags = ["neptune", "local-config"]
+
+[[rules]]
+id = "neptune-env-file"
+description = "Committed local env file"
+path = '''(^|/)\.env(\.(local|development|production|test|staging|development\.local|production\.local|test\.local|staging\.local))?$'''
+regex = '''(?m)^\s*([A-Za-z_][A-Za-z0-9_]*\s*=\s*\S+)'''
+secretGroup = 1
+tags = ["neptune", "env"]

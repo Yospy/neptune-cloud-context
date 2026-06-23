@@ -56,6 +56,8 @@ export type UploadReceipt = {
   version: number;
   created_at: string;
   content_hash: string;
+  created_by_user: UserProfile;
+  updated_by_user: UserProfile;
 };
 
 export type UploadReceiptResponse = {
@@ -78,6 +80,8 @@ export type ContextSummary = {
   updated_at: string;
   version: number;
   content_hash: string;
+  created_by_user: UserProfile;
+  updated_by_user: UserProfile;
 };
 
 export type ContextRecord = ContextSummary & {

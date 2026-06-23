@@ -1,7 +1,13 @@
 import type { UploadReceipt } from "neptune-context-shared";
 import type { ContextRow, OrgProject } from "./repository.js";
 
-export function formatUploadReceipt(row: ContextRow, orgProject: OrgProject): UploadReceipt {
+type ReceiptAttribution = Pick<UploadReceipt, "created_by_user" | "updated_by_user">;
+
+export function formatUploadReceipt(
+  row: ContextRow,
+  orgProject: OrgProject,
+  attribution: ReceiptAttribution
+): UploadReceipt {
   return {
     context_id: row.id,
     org: orgProject.org_slug,
@@ -15,6 +21,8 @@ export function formatUploadReceipt(row: ContextRow, orgProject: OrgProject): Up
     status: row.status,
     version: row.version,
     created_at: row.created_at,
-    content_hash: row.content_hash
+    content_hash: row.content_hash,
+    created_by_user: attribution.created_by_user,
+    updated_by_user: attribution.updated_by_user
   };
 }

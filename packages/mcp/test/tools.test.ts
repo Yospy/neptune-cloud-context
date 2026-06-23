@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it, vi } from "vitest";
 import type { NeptuneClient } from "neptune-context";
+import { contextPayloadLimits } from "neptune-context-shared";
 import { createNeptuneMcpServer } from "../src/server.js";
 import {
   NEPTUNE_TOOL_NAMES,
@@ -11,6 +12,16 @@ import {
 } from "../src/tools.js";
 
 function createMockDeps(): NeptuneToolDeps {
+  const userProfile = {
+    id: "22222222-2222-4222-8222-222222222222",
+    email: "user@example.com",
+    display_name: "Test User",
+    avatar_url: null,
+    provider: "github",
+    last_seen_at: "2026-05-18T00:00:00.000Z",
+    created_at: "2026-05-18T00:00:00.000Z",
+    updated_at: "2026-05-18T00:00:00.000Z"
+  };
   const client = {
     createContext: vi.fn(async () => ({
       ok: true,
@@ -28,7 +39,9 @@ function createMockDeps(): NeptuneToolDeps {
         status: "active",
         version: 1,
         created_at: "2026-05-18T00:00:00.000Z",
-        content_hash: "sha256:test"
+        content_hash: "sha256:test",
+        created_by_user: userProfile,
+        updated_by_user: userProfile
       }
     })),
     listRelevantContext: vi.fn(async () => ({ ok: true, contexts: [] })),
@@ -46,6 +59,32 @@ function createMockDeps(): NeptuneToolDeps {
       default_workstream: "backend" as const
     }))
   };
+}
+
+function createContextArgs(overrides: Record<string, unknown> = {}) {
+  return {
+    project_id: "22222222-2222-4222-8222-222222222222",
+    title: "Auth Context",
+    summary: "Frontend to backend auth API.",
+    content_md: "# Auth Context\n\nFrontend to backend auth API.",
+    source_workstream: "frontend",
+    target_workstreams: ["backend"],
+    domain: "auth",
+    code_areas: ["login"],
+    context_type: "api_contract",
+    tags: ["auth"],
+    repo_paths: [],
+    related_files: [],
+    ...overrides
+  };
+}
+
+function oversizedString(maxLength: number) {
+  return "x".repeat(maxLength + 1);
+}
+
+function oversizedArray(maxItems: number, value: string) {
+  return Array.from({ length: maxItems + 1 }, () => value);
 }
 
 describe("Neptune MCP tools", () => {
@@ -157,6 +196,48 @@ describe("Neptune MCP tools", () => {
     });
   });
 
+  it.each([
+    ["summary", { summary: oversizedString(contextPayloadLimits.summaryMax) }],
+    ["content_md", { content_md: oversizedString(contextPayloadLimits.contentMdMax) }],
+    [
+      "target_workstreams",
+      {
+        target_workstreams: oversizedArray(
+          contextPayloadLimits.targetWorkstreamsMax,
+          "backend"
+        )
+      }
+    ],
+    ["code_areas count", { code_areas: oversizedArray(contextPayloadLimits.codeAreasMax, "login") }],
+    ["code_areas item", { code_areas: [oversizedString(contextPayloadLimits.codeAreaMax)] }],
+    ["tags count", { tags: oversizedArray(contextPayloadLimits.tagsMax, "auth") }],
+    ["tags item", { tags: [oversizedString(contextPayloadLimits.tagMax)] }],
+    ["repo_paths count", { repo_paths: oversizedArray(contextPayloadLimits.repoPathsMax, "src/a.ts") }],
+    ["repo_paths item", { repo_paths: [oversizedString(contextPayloadLimits.repoPathMax)] }],
+    [
+      "related_files count",
+      { related_files: oversizedArray(contextPayloadLimits.relatedFilesMax, "src/a.ts") }
+    ],
+    [
+      "related_files item",
+      { related_files: [oversizedString(contextPayloadLimits.relatedFileMax)] }
+    ],
+    [
+      "inference_notes",
+      { inference_notes: oversizedString(contextPayloadLimits.inferenceNotesMax) }
+    ]
+  ])("rejects oversized create_context %s before SDK calls", async (_name, overrides) => {
+    const deps = createMockDeps();
+    const result = await callNeptuneTool("create_context", createContextArgs(overrides), deps);
+
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_FAILED" }
+    });
+    expect(deps.client?.createContext).not.toHaveBeenCalled();
+  });
+
   it("normalizes SDK errors into MCP error results", async () => {
     const deps = createMockDeps();
     vi.mocked(deps.client!.listRelevantContext).mockRejectedValueOnce({
@@ -179,6 +260,83 @@ describe("Neptune MCP tools", () => {
     expect(result.structuredContent).toMatchObject({
       ok: false,
       error: { code: "AUTH_REQUIRED", status: 401 }
+    });
+  });
+
+  it("propagates project access denials from SDK calls", async () => {
+    const denied = {
+      name: "NeptuneSdkError",
+      code: "PROJECT_ACCESS_DENIED",
+      message: "Project access denied.",
+      status: 403
+    };
+
+    const listDeps = createMockDeps();
+    vi.mocked(listDeps.client!.listRelevantContext).mockRejectedValueOnce(denied);
+    await expect(
+      callNeptuneTool(
+        "list_relevant_context",
+        {
+          project_id: "77777777-7777-4777-8777-777777777777",
+          target_workstream: "backend"
+        },
+        listDeps
+      )
+    ).resolves.toMatchObject({
+      isError: true,
+      structuredContent: { error: { code: "PROJECT_ACCESS_DENIED", status: 403 } }
+    });
+
+    const getDeps = createMockDeps();
+    vi.mocked(getDeps.client!.getContext).mockRejectedValueOnce(denied);
+    await expect(
+      callNeptuneTool(
+        "get_context",
+        { context_id: "99999999-9999-4999-8999-999999999999" },
+        getDeps
+      )
+    ).resolves.toMatchObject({
+      isError: true,
+      structuredContent: { error: { code: "PROJECT_ACCESS_DENIED", status: 403 } }
+    });
+
+    const createDeps = createMockDeps();
+    vi.mocked(createDeps.client!.createContext).mockRejectedValueOnce(denied);
+    await expect(
+      callNeptuneTool(
+        "create_context",
+        {
+          project_id: "77777777-7777-4777-8777-777777777777",
+          title: "Foreign Auth Context",
+          summary: "Context in a project the caller cannot access.",
+          content_md: "# Foreign Auth Context\n\nPrivate to another project.",
+          source_workstream: "frontend",
+          target_workstreams: ["backend"],
+          domain: "auth",
+          code_areas: ["login"],
+          context_type: "ui_contract",
+          tags: [],
+          repo_paths: [],
+          related_files: []
+        },
+        createDeps
+      )
+    ).resolves.toMatchObject({
+      isError: true,
+      structuredContent: { error: { code: "PROJECT_ACCESS_DENIED", status: 403 } }
+    });
+
+    const referenceDeps = createMockDeps();
+    vi.mocked(referenceDeps.client!.markContextReferenced).mockRejectedValueOnce(denied);
+    await expect(
+      callNeptuneTool(
+        "mark_context_referenced",
+        { context_id: "99999999-9999-4999-8999-999999999999" },
+        referenceDeps
+      )
+    ).resolves.toMatchObject({
+      isError: true,
+      structuredContent: { error: { code: "PROJECT_ACCESS_DENIED", status: 403 } }
     });
   });
 
