@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  contextPayloadLimits,
   createOrgRequestSchema,
   createContextRequestSchema,
   createProjectRequestSchema,
@@ -9,6 +10,28 @@ import {
 } from "../src/index.js";
 
 const projectId = "11111111-1111-4111-8111-111111111111";
+
+function createContextPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    project_id: projectId,
+    title: "Auth Contract",
+    summary: "Login request and response contract.",
+    content_md: "# Auth Contract",
+    source_workstream: "frontend",
+    target_workstreams: ["backend"],
+    domain: "auth",
+    context_type: "ui_contract",
+    ...overrides
+  };
+}
+
+function oversizedString(maxLength: number) {
+  return "x".repeat(maxLength + 1);
+}
+
+function oversizedArray(maxItems: number, value: string) {
+  return Array.from({ length: maxItems + 1 }, () => value);
+}
 
 describe("shared schemas", () => {
   it("validates a create context request with defaults", () => {
@@ -61,6 +84,42 @@ describe("shared schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it.each([
+    ["summary", { summary: oversizedString(contextPayloadLimits.summaryMax) }],
+    ["content_md", { content_md: oversizedString(contextPayloadLimits.contentMdMax) }],
+    [
+      "target_workstreams",
+      {
+        target_workstreams: oversizedArray(
+          contextPayloadLimits.targetWorkstreamsMax,
+          "backend"
+        )
+      }
+    ],
+    ["code_areas count", { code_areas: oversizedArray(contextPayloadLimits.codeAreasMax, "login") }],
+    ["code_areas item", { code_areas: [oversizedString(contextPayloadLimits.codeAreaMax)] }],
+    ["tags count", { tags: oversizedArray(contextPayloadLimits.tagsMax, "auth") }],
+    ["tags item", { tags: [oversizedString(contextPayloadLimits.tagMax)] }],
+    ["repo_paths count", { repo_paths: oversizedArray(contextPayloadLimits.repoPathsMax, "src/a.ts") }],
+    ["repo_paths item", { repo_paths: [oversizedString(contextPayloadLimits.repoPathMax)] }],
+    [
+      "related_files count",
+      { related_files: oversizedArray(contextPayloadLimits.relatedFilesMax, "src/a.ts") }
+    ],
+    [
+      "related_files item",
+      { related_files: [oversizedString(contextPayloadLimits.relatedFileMax)] }
+    ],
+    [
+      "inference_notes",
+      { inference_notes: oversizedString(contextPayloadLimits.inferenceNotesMax) }
+    ]
+  ])("rejects oversized create context %s", (_name, overrides) => {
+    const result = createContextRequestSchema.safeParse(createContextPayload(overrides));
+
+    expect(result.success).toBe(false);
+  });
+
   it("coerces relevant context query values", () => {
     const parsed = relevantContextQuerySchema.parse({
       project_id: projectId,
@@ -91,6 +150,7 @@ describe("shared schemas", () => {
     expect(errorCodes).toContain("PROJECT_ACCESS_DENIED");
     expect(errorCodes).toContain("PROJECT_NOT_FOUND");
     expect(errorCodes).toContain("VALIDATION_FAILED");
+    expect(errorCodes).toContain("RATE_LIMITED");
   });
 
   it("validates org and project bootstrap payloads", () => {

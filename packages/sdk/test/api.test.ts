@@ -157,6 +157,43 @@ describe("SDK API client", () => {
     );
   });
 
+  it("preserves backend rate limit errors", async () => {
+    const fetch = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      text: async () =>
+        JSON.stringify({
+          ok: false,
+          error: {
+            code: "RATE_LIMITED",
+            message: "Rate limit exceeded."
+          }
+        })
+    }));
+
+    await expect(
+      apiRequest("/contexts", {}, {
+        fetch,
+        config: {
+          apiUrl: "http://127.0.0.1:8787",
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        }
+      })
+    ).rejects.toEqual(
+      expect.objectContaining({
+        code: "RATE_LIMITED",
+        message: "Rate limit exceeded.",
+        status: 429
+      })
+    );
+  });
+
   it("normalizes network failures", async () => {
     const fetch = vi.fn(async () => {
       throw new Error("connection refused");

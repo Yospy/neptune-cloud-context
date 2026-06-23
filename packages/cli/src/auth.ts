@@ -30,28 +30,150 @@ function createMemoryStorage(): MemoryStorage {
   };
 }
 
-function sendHtml(response: ServerResponse, status: number, title: string, body: string) {
-  response.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-  response.end(`<!doctype html>
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function renderCallbackHtml(status: number, title: string, body: string) {
+  const safeTitle = escapeHtml(title);
+  const safeBody = escapeHtml(body);
+  const isSuccess = status >= 200 && status < 300;
+  const statusText = isSuccess ? "Authentication complete" : "Action needed";
+  const iconPath = isSuccess
+    ? '<path d="m6.9 12.6 3.4 3.3 7-7.4" />'
+    : '<path d="M12 7.2v5.1" /><path d="M12 16.8h.01" />';
+
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title}</title>
+  <title>${safeTitle}</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f7f7f4; color: #181816; }
-    main { width: min(520px, calc(100vw - 32px)); border: 1px solid #d8d6cf; background: #fff; border-radius: 8px; padding: 28px; box-shadow: 0 18px 50px rgba(0,0,0,.08); }
-    h1 { font-size: 22px; margin: 0 0 10px; }
-    p { line-height: 1.5; margin: 0; color: #4d4a43; }
+    :root {
+      color-scheme: dark;
+      --bg: #000000;
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.62);
+      --faint: rgba(255, 255, 255, 0.42);
+      --panel: rgba(255, 255, 255, 0.04);
+      --panel-border: rgba(255, 255, 255, 0.10);
+      --success: #22c55e;
+      --danger: #fb7185;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(120, 180, 255, 0.25), transparent 70%),
+        var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-rendering: geometricPrecision;
+    }
+
+    main {
+      width: min(440px, calc(100vw - 40px));
+      padding: 28px;
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      margin-bottom: 28px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .status-icon {
+      width: 38px;
+      height: 38px;
+      margin-bottom: 18px;
+      display: grid;
+      place-items: center;
+      color: var(--tone);
+    }
+
+    .success {
+      --tone: var(--success);
+    }
+
+    .error {
+      --tone: var(--danger);
+    }
+
+    svg {
+      width: 38px;
+      height: 38px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1.12;
+      font-weight: 720;
+      letter-spacing: 0;
+    }
+
+    .message {
+      max-width: 32rem;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+    }
   </style>
 </head>
-<body>
-  <main>
-    <h1>${title}</h1>
-    <p>${body}</p>
+<body class="${isSuccess ? "success" : "error"}">
+  <main aria-live="polite">
+    <div class="brand">Neptune</div>
+    <div class="status-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">${iconPath}</svg>
+    </div>
+    <p class="eyebrow">${statusText}</p>
+    <h1>${safeTitle}</h1>
+    <p class="message">${safeBody}</p>
   </main>
 </body>
-</html>`);
+</html>`;
+}
+
+function sendHtml(response: ServerResponse, status: number, title: string, body: string) {
+  response.writeHead(status, { "content-type": "text/html; charset=utf-8" });
+  response.end(renderCallbackHtml(status, title, body));
 }
 
 export function addApiKeyToOAuthUrl(url: string, supabaseAnonKey: string) {
@@ -116,7 +238,7 @@ export async function loginWithGitHub(options: LoginOptions): Promise<StoredAuth
         return;
       }
 
-      sendHtml(response, 200, "Neptune login complete", "You can close this tab and return to your terminal.");
+      sendHtml(response, 200, "Signed in", "Return to your terminal to continue.");
       clearTimeout(timer);
       resolve(sessionToStoredAuth(data.session));
     });

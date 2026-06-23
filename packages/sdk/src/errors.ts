@@ -29,6 +29,7 @@ function isErrorCode(value: unknown): value is ErrorCode {
     value === "PROJECT_NOT_FOUND" ||
     value === "CONFLICT" ||
     value === "VALIDATION_FAILED" ||
+    value === "RATE_LIMITED" ||
     value === "CONTEXT_NOT_FOUND" ||
     value === "NETWORK_ERROR" ||
     value === "INTERNAL_ERROR"

@@ -7,7 +7,6 @@ import {
 } from "./enums.js";
 
 const nonEmptyText = z.string().trim().min(1);
-const stringList = z.array(z.string().trim().min(1)).default([]);
 const slug = z
   .string()
   .trim()
@@ -19,6 +18,27 @@ export const workstreamSchema = z.enum(workstreamValues);
 export const contextTypeSchema = z.enum(contextTypeValues);
 export const contextStatusSchema = z.enum(contextStatusValues);
 export const prioritySchema = z.enum(priorityValues);
+
+export const contextPayloadLimits = {
+  titleMax: 160,
+  summaryMax: 500,
+  contentMdMax: 100_000,
+  domainMax: 80,
+  targetWorkstreamsMax: workstreamValues.length,
+  codeAreasMax: 25,
+  codeAreaMax: 120,
+  tagsMax: 25,
+  tagMax: 80,
+  repoPathsMax: 50,
+  repoPathMax: 500,
+  relatedFilesMax: 50,
+  relatedFileMax: 500,
+  inferenceNotesMax: 1_000
+} as const;
+
+function stringList(maxItems: number, maxItemLength: number) {
+  return z.array(z.string().trim().min(1).max(maxItemLength)).max(maxItems).default([]);
+}
 
 export const createOrgRequestSchema = z.object({
   slug,
@@ -46,20 +66,26 @@ export const projectIdParamsSchema = z.object({
 
 export const createContextRequestSchema = z.object({
   project_id: z.string().uuid(),
-  title: nonEmptyText.max(160),
-  summary: nonEmptyText.max(500),
-  content_md: nonEmptyText,
+  title: nonEmptyText.max(contextPayloadLimits.titleMax),
+  summary: nonEmptyText.max(contextPayloadLimits.summaryMax),
+  content_md: nonEmptyText.max(contextPayloadLimits.contentMdMax),
   source_workstream: workstreamSchema,
-  target_workstreams: z.array(workstreamSchema).min(1),
-  domain: nonEmptyText.max(80),
-  code_areas: stringList,
+  target_workstreams: z
+    .array(workstreamSchema)
+    .min(1)
+    .max(contextPayloadLimits.targetWorkstreamsMax),
+  domain: nonEmptyText.max(contextPayloadLimits.domainMax),
+  code_areas: stringList(contextPayloadLimits.codeAreasMax, contextPayloadLimits.codeAreaMax),
   context_type: contextTypeSchema,
   priority: prioritySchema.default("normal"),
-  tags: stringList,
-  repo_paths: stringList,
-  related_files: stringList,
+  tags: stringList(contextPayloadLimits.tagsMax, contextPayloadLimits.tagMax),
+  repo_paths: stringList(contextPayloadLimits.repoPathsMax, contextPayloadLimits.repoPathMax),
+  related_files: stringList(
+    contextPayloadLimits.relatedFilesMax,
+    contextPayloadLimits.relatedFileMax
+  ),
   confidence_score: z.number().min(0).max(1).optional(),
-  inference_notes: z.string().trim().optional()
+  inference_notes: z.string().trim().max(contextPayloadLimits.inferenceNotesMax).optional()
 });
 
 export const relevantContextQuerySchema = z.object({

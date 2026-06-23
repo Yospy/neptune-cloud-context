@@ -2,14 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import { SupabaseContextRepository } from "../src/repository.js";
 import { createFakeSupabase } from "./fake-supabase.js";
 import {
+  addForeignProjectContext,
   baseTables,
   contextId,
   createContextInput,
   orgId,
+  otherContextId,
+  otherProjectId,
   otherUserId,
   projectId,
   userId
 } from "./helpers.js";
+
+const createdAt = "2026-05-16T12:00:00.000Z";
+const updatedAt = "2026-05-16T12:01:00.000Z";
 
 function receipt(version: number, changed: boolean) {
   return {
@@ -33,9 +39,59 @@ function receipt(version: number, changed: boolean) {
   };
 }
 
-function rpcClient(data: unknown = { ok: true }, error: unknown = null) {
+function contextTables(version = 1, updatedBy = userId) {
+  const tables = baseTables();
+  tables.user_profiles.push({
+    id: otherUserId,
+    email: "other@example.com",
+    display_name: "Other User",
+    avatar_url: null,
+    provider: "github",
+    last_seen_at: createdAt,
+    created_at: createdAt,
+    updated_at: createdAt
+  });
+  tables.contexts.push({
+    id: contextId,
+    org_id: orgId,
+    project_id: projectId,
+    title: "Auth UI Login Contract",
+    summary: "Frontend login sends email and password.",
+    content_md: "# Auth UI Login Contract\n\nSend email and password.",
+    content_hash: "sha256:test",
+    source_workstream: "frontend",
+    target_workstreams: ["backend"],
+    domain: "auth",
+    code_areas: ["login", "session"],
+    context_type: "ui_contract",
+    priority: "normal",
+    status: "active",
+    repo_paths: ["src/features/auth/LoginForm.tsx"],
+    related_files: [],
+    tags: ["jwt"],
+    created_by: userId,
+    created_at: createdAt,
+    updated_at: updatedAt,
+    version
+  });
+  tables.context_versions.push({
+    context_id: contextId,
+    org_id: orgId,
+    project_id: projectId,
+    version,
+    content_md: "# Auth UI Login Contract\n\nSend email and password.",
+    content_hash: "sha256:test",
+    metadata: {},
+    created_by: updatedBy,
+    created_at: updatedAt
+  });
+  return tables;
+}
+
+function rpcClient(data: unknown = { ok: true }, error: unknown = null, tables = baseTables()) {
+  const fake = createFakeSupabase(tables);
   return {
-    from: vi.fn(),
+    from: fake.from,
     rpc: vi.fn(async () => ({ data, error }))
   };
 }
@@ -176,13 +232,15 @@ describe("SupabaseContextRepository", () => {
   });
 
   it("creates context through the transactional upsert RPC", async () => {
-    const client = rpcClient(receipt(1, true));
+    const client = rpcClient(receipt(1, true), null, contextTables());
     const repo = new SupabaseContextRepository(client);
 
     const result = await repo.createContext(createContextInput(), { id: userId });
 
     expect(result.changed).toBe(true);
     expect(result.receipt.version).toBe(1);
+    expect(result.receipt.created_by_user.email).toBe("user@example.com");
+    expect(result.receipt.updated_by_user.email).toBe("user@example.com");
     expect(client.rpc).toHaveBeenCalledWith(
       "neptune_upsert_context",
       expect.objectContaining({
@@ -196,17 +254,19 @@ describe("SupabaseContextRepository", () => {
   });
 
   it("returns duplicate context receipts from the upsert RPC", async () => {
-    const client = rpcClient(receipt(1, false));
+    const client = rpcClient(receipt(1, false), null, contextTables());
     const repo = new SupabaseContextRepository(client);
 
     const result = await repo.createContext(createContextInput(), { id: userId });
 
     expect(result.changed).toBe(false);
     expect(result.receipt.version).toBe(1);
+    expect(result.receipt.created_by_user.id).toBe(userId);
+    expect(result.receipt.updated_by_user.id).toBe(userId);
   });
 
   it("returns changed context receipts from the upsert RPC", async () => {
-    const client = rpcClient(receipt(2, true));
+    const client = rpcClient(receipt(2, true), null, contextTables(2, otherUserId));
     const repo = new SupabaseContextRepository(client);
 
     const result = await repo.createContext(
@@ -216,13 +276,39 @@ describe("SupabaseContextRepository", () => {
 
     expect(result.changed).toBe(true);
     expect(result.receipt.version).toBe(2);
+    expect(result.receipt.created_by_user.id).toBe(userId);
+    expect(result.receipt.updated_by_user.id).toBe(otherUserId);
   });
 
   it("maps RPC access errors to deterministic app errors", async () => {
     const client = rpcClient(null, { message: "PROJECT_ACCESS_DENIED" });
     const repo = new SupabaseContextRepository(client);
 
-    await expect(repo.createContext(createContextInput(), { id: userId })).rejects.toMatchObject({
+    await expect(
+      repo.createContext(createContextInput({ project_id: otherProjectId }), { id: userId })
+    ).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
+  it("maps RPC access errors for context references", async () => {
+    const client = rpcClient(null, { message: "PROJECT_ACCESS_DENIED" });
+    const repo = new SupabaseContextRepository(client);
+
+    await expect(
+      repo.markContextReferenced(otherContextId, { id: userId }, { agent_name: "codex" })
+    ).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
+  it("maps RPC access errors for context resolves", async () => {
+    const client = rpcClient(null, { message: "PROJECT_ACCESS_DENIED" });
+    const repo = new SupabaseContextRepository(client);
+
+    await expect(
+      repo.resolveContext(otherContextId, { id: userId }, { agent_name: "codex" })
+    ).rejects.toMatchObject({
       code: "PROJECT_ACCESS_DENIED"
     });
   });
@@ -314,6 +400,48 @@ describe("SupabaseContextRepository", () => {
     });
   });
 
+  it("denies relevant context listing for a foreign project", async () => {
+    const repo = new SupabaseContextRepository(
+      createFakeSupabase(addForeignProjectContext(baseTables()))
+    );
+
+    await expect(
+      repo.listRelevantContext(
+        {
+          project_id: otherProjectId,
+          target_workstream: "backend",
+          unread_only: false,
+          limit: 10
+        },
+        { id: userId }
+      )
+    ).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
+  it("denies direct context reads for a foreign project", async () => {
+    const repo = new SupabaseContextRepository(
+      createFakeSupabase(addForeignProjectContext(baseTables()))
+    );
+
+    await expect(repo.getContext(otherContextId, { id: userId })).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
+  it("denies read receipts for a foreign project context", async () => {
+    const repo = new SupabaseContextRepository(
+      createFakeSupabase(addForeignProjectContext(baseTables()))
+    );
+
+    await expect(
+      repo.markContextRead(otherContextId, { id: userId }, "codex")
+    ).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
   it("lists only active relevant contexts", async () => {
     const tables = baseTables();
     tables.contexts.push(
@@ -378,6 +506,32 @@ describe("SupabaseContextRepository", () => {
     );
 
     expect(contexts.map((context) => context.title)).toEqual(["Active Auth"]);
+    expect(contexts[0]).toMatchObject({
+      created_by_user: { id: userId, email: "user@example.com" },
+      updated_by_user: { id: userId, email: "user@example.com" }
+    });
+  });
+
+  it("returns publisher identity on direct context reads", async () => {
+    const repo = new SupabaseContextRepository(createFakeSupabase(contextTables()));
+
+    const context = await repo.getContext(contextId, { id: userId });
+
+    expect(context).toMatchObject({
+      id: contextId,
+      created_by_user: { id: userId, email: "user@example.com" },
+      updated_by_user: { id: userId, email: "user@example.com" }
+    });
+  });
+
+  it("does not fake updater identity when a current version row is missing", async () => {
+    const tables = contextTables(2);
+    tables.context_versions = [];
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    await expect(repo.getContext(contextId, { id: userId })).rejects.toMatchObject({
+      code: "INTERNAL_ERROR"
+    });
   });
 
   it("excludes read contexts when unread_only is true", async () => {

@@ -2,13 +2,36 @@
 
 ## Active Sprint
 
-`sprints/2026-05-21-cli-name-create-commands.md`
+`sprints/2026-06-19-neptune-security-hardening.md`
 
 ## Previous Sprint
 
-`sprints/2026-05-19-neptune-first-user-v1-completion.md`
+`sprints/2026-05-21-cli-name-create-commands.md`
 
 ## Tasks
+
+- [x] Create Neptune security hardening sprint plan.
+- [x] Add cross-org/project authorization fixtures.
+- [x] Add context authorization regression tests.
+- [x] Run focused backend security test verification.
+- [x] Review diff, side effects, and isolation invariant alignment.
+- [x] Add publisher identity response contract.
+- [x] Enrich context summaries, records, and receipts with publisher/updater profiles.
+- [x] Update receipt formatting and docs.
+- [x] Run publisher identity verification and live probe.
+- [x] Add payload limit constants and shared/backend validation.
+- [x] Mirror payload limits in MCP tool validation.
+- [x] Add payload limit regression tests.
+- [x] Run payload limit verification; document live probe status.
+- [x] Add backend rate-limit error contract.
+- [x] Add protected-route and context-route rate-limit middleware.
+- [x] Add rate-limit regression tests.
+- [x] Run rate-limit verification; document live probe status.
+- [x] Add pre-auth protected-route rate limit for invalid token loops.
+- [x] Run pre-auth rate-limit verification and live probe.
+- [x] Add CI secret scanning workflow and Neptune-specific rules.
+- [x] Run local secret-scan simulation and workflow/config validation.
+- [x] Review secret scanning diff and document results.
 
 - [x] Create CLI name create commands sprint plan.
 - [x] Update org/project create command parsing.

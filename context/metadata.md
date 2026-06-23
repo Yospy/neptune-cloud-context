@@ -28,8 +28,12 @@ priority
 created_by
 created_at
 updated_at
+created_by_user
+updated_by_user
 version
 ```
+
+`created_by_user` is the publishing user profile. `updated_by_user` is the user profile on the current `context_versions.created_by` row.
 
 ## Recommended Metadata
 
@@ -45,6 +49,21 @@ confidence_score
 inference_notes
 resolved_at
 superseded_by
+```
+
+## Payload Limits
+
+Context creation rejects oversized payloads before writes:
+
+```text
+content_md <= 100000 chars
+summary <= 500 chars
+code_areas <= 25 items, each <= 120 chars
+tags <= 25 items, each <= 80 chars
+repo_paths <= 50 items, each <= 500 chars
+related_files <= 50 items, each <= 500 chars
+target_workstreams <= 9 items
+inference_notes <= 1000 chars
 ```
 
 ## Inference Rules
@@ -144,6 +163,8 @@ Type: ui_contract
 Status: active
 Version: 1
 Created at: 2026-05-16T12:04:22Z
+Published by: yash@example.com
+Updated by: yash@example.com
 Hash: sha256:91ab...
 ```
 
@@ -185,6 +206,16 @@ Hash: sha256:72cd...
   "tags": ["login", "jwt", "refresh-token"],
   "created_at": "2026-05-16T12:00:00Z",
   "updated_at": "2026-05-16T12:00:00Z",
+  "created_by_user": {
+    "id": "auth-user-uuid",
+    "email": "yash@example.com",
+    "display_name": "Yash"
+  },
+  "updated_by_user": {
+    "id": "auth-user-uuid",
+    "email": "yash@example.com",
+    "display_name": "Yash"
+  },
   "version": 1,
   "confidence_score": 0.88,
   "inference_notes": "Inferred frontend to backend because markdown describes request body and expected backend response."

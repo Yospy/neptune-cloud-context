@@ -6,6 +6,7 @@ export const errorCodes = [
   "PROJECT_NOT_FOUND",
   "CONFLICT",
   "VALIDATION_FAILED",
+  "RATE_LIMITED",
   "CONTEXT_NOT_FOUND",
   "NETWORK_ERROR",
   "INTERNAL_ERROR"

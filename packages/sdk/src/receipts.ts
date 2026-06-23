@@ -4,6 +4,10 @@ function unwrapReceipt(input: UploadReceipt | UploadReceiptResponse) {
   return "receipt" in input ? input.receipt : input;
 }
 
+function userLabel(user: UploadReceipt["created_by_user"]) {
+  return user.email ?? user.display_name ?? user.id;
+}
+
 export function formatUploadReceipt(input: UploadReceipt | UploadReceiptResponse) {
   const receipt = unwrapReceipt(input);
   const changed = "changed" in input ? input.changed : true;
@@ -24,6 +28,8 @@ export function formatUploadReceipt(input: UploadReceipt | UploadReceiptResponse
     `Status: ${receipt.status}`,
     `Version: ${receipt.version}`,
     `Created at: ${receipt.created_at}`,
+    `Published by: ${userLabel(receipt.created_by_user)}`,
+    `Updated by: ${userLabel(receipt.updated_by_user)}`,
     `Hash: ${receipt.content_hash}`
   ].join("\n");
 }

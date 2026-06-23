@@ -150,6 +150,21 @@ uses org_members/project_members for authorization
 }
 ```
 
+Create context payload limits:
+
+```text
+title <= 160 chars
+summary <= 500 chars
+content_md <= 100000 chars
+domain <= 80 chars
+target_workstreams <= 9 items
+code_areas <= 25 items, each <= 120 chars
+tags <= 25 items, each <= 80 chars
+repo_paths <= 50 items, each <= 500 chars
+related_files <= 50 items, each <= 500 chars
+inference_notes <= 1000 chars
+```
+
 ## Upload Receipt Response
 
 ```json
@@ -168,6 +183,26 @@ uses org_members/project_members for authorization
     "status": "active",
     "version": 1,
     "created_at": "2026-05-16T12:04:22Z",
+    "created_by_user": {
+      "id": "auth-user-uuid",
+      "email": "yash@example.com",
+      "display_name": "Yash",
+      "avatar_url": null,
+      "provider": "github",
+      "last_seen_at": "2026-05-16T12:04:22Z",
+      "created_at": "2026-05-16T12:04:22Z",
+      "updated_at": "2026-05-16T12:04:22Z"
+    },
+    "updated_by_user": {
+      "id": "auth-user-uuid",
+      "email": "yash@example.com",
+      "display_name": "Yash",
+      "avatar_url": null,
+      "provider": "github",
+      "last_seen_at": "2026-05-16T12:04:22Z",
+      "created_at": "2026-05-16T12:04:22Z",
+      "updated_at": "2026-05-16T12:04:22Z"
+    },
     "content_hash": "sha256:91ab..."
   }
 }
@@ -180,10 +215,27 @@ Never trust client-provided org_id without checking membership.
 Every project action must verify project_members.
 Every context write must create a context_events row.
 Every content change must create a context_versions row.
+Context responses and upload receipts must expose `created_by_user` and `updated_by_user`.
 Duplicate content_hash for same project/title should not create a new version.
 Resolved contexts stay queryable but are excluded from active relevant results by default.
 Duplicate org/project slugs must return 409 CONFLICT, not 500 INTERNAL_ERROR.
 ```
+
+## Rate Limits
+
+Protected routes use in-process fixed-window rate limits in V1:
+
+```text
+all auth-protected routes before auth verification: 300 requests / minute / client IP/header identity
+all auth-protected routes: 300 requests / minute / user
+POST /contexts: 30 requests / minute / user
+GET /contexts/relevant: 120 requests / minute / user
+GET /contexts/:context_id: 120 requests / minute / user
+```
+
+The pre-auth bucket runs before Supabase token verification and is keyed from `X-Forwarded-For`, `X-Real-IP`, `CF-Connecting-IP`, or an `unknown` direct/local fallback. The per-user bucket still runs after authentication.
+
+Exceeded limits return `429 RATE_LIMITED` with a `Retry-After` header.
 
 ## Verified Smoke Status
 

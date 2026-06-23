@@ -164,6 +164,8 @@ markContextReferenced(input: ReferenceInput): Promise<void>
 resolveContext(id: string): Promise<void>
 ```
 
+`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context.
+
 ## Metadata Inference Contract
 
 The SDK should return structured metadata with confidence.
