@@ -240,6 +240,6 @@ For "new context for frontend":
 project_id = current project
 target_workstreams includes frontend
 status = active
-exclude contexts already read by current user/agent
+exclude contexts already read by current user
 order by updated_at desc
 ```

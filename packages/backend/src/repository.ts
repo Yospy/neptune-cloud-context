@@ -73,6 +73,7 @@ export type ContextRow = {
   version: number;
   confidence_score?: number | null;
   inference_notes?: string | null;
+  match_reason?: string | null;
 };
 
 type ProjectMemberRow = {
@@ -177,7 +178,7 @@ function raiseOnError(error: DbError | null, fallbackMessage: string): void {
 }
 
 function contextSummary(row: ContextRow, attribution: ContextAttribution): ContextSummary {
-  return {
+  const summary: ContextSummary = {
     id: row.id,
     title: row.title,
     summary: row.summary,
@@ -194,6 +195,12 @@ function contextSummary(row: ContextRow, attribution: ContextAttribution): Conte
     created_by_user: attribution.created_by_user,
     updated_by_user: attribution.updated_by_user
   };
+
+  if (row.match_reason) {
+    summary.match_reason = row.match_reason;
+  }
+
+  return summary;
 }
 
 function contextRecord(row: ContextRow, attribution: ContextAttribution): ContextRecord {
@@ -462,42 +469,21 @@ export class SupabaseContextRepository implements ContextRepository {
     query: RelevantContextQuery,
     user: AuthenticatedUser
   ): Promise<ContextSummary[]> {
-    await this.getOrgProjectForMember(query.project_id, user.id);
-
-    let builder = table<any>(this.client, "contexts")
-      .select("*")
-      .eq("project_id", query.project_id)
-      .eq("status", "active")
-      .contains("target_workstreams", [query.target_workstream])
-      .order("updated_at", { ascending: false })
-      .limit(query.unread_only ? 50 : query.limit);
-
-    if (query.domain) {
-      builder = builder.eq("domain", query.domain);
-    }
-
-    if (query.context_type) {
-      builder = builder.eq("context_type", query.context_type);
-    }
-
-    if (query.code_area) {
-      builder = builder.contains("code_areas", [query.code_area]);
-    }
-
-    const { data, error } = (await builder) as QueryResult<ContextRow[]>;
+    const { data, error } = (await this.client.rpc("neptune_list_relevant_context", {
+      p_actor_user_id: user.id,
+      p_project_id: query.project_id,
+      p_target_workstream: query.target_workstream,
+      p_query: query.query ?? null,
+      p_domain: query.domain ?? null,
+      p_code_area: query.code_area ?? null,
+      p_context_type: query.context_type ?? null,
+      p_updated_after: query.updated_after ?? null,
+      p_unread_only: query.unread_only,
+      p_limit: query.limit
+    })) as QueryResult<ContextRow[]>;
     raiseOnError(error, "Failed to list relevant contexts.");
 
-    let rows = data ?? [];
-
-    if (query.unread_only && rows.length > 0) {
-      const readContextIds = await this.getReadContextIds(
-        rows.map((row) => row.id),
-        user.id
-      );
-      rows = rows.filter((row) => !readContextIds.has(row.id));
-    }
-
-    const limitedRows = rows.slice(0, query.limit);
+    const limitedRows = data ?? [];
     const attribution = await this.getContextAttribution(limitedRows);
 
     return limitedRows.map((row) => contextSummary(row, this.requireAttribution(row, attribution)));

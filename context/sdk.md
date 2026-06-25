@@ -19,7 +19,7 @@ Status: foundation implemented and published to npm. The SDK now owns config/ses
 packages/sdk
 public package name: neptune-context
 public shared package: neptune-context-shared
-current public version: 0.1.1
+current public version: 0.1.6
 language: TypeScript
 runtime: Node.js >=20
 ```
@@ -164,7 +164,9 @@ markContextReferenced(input: ReferenceInput): Promise<void>
 resolveContext(id: string): Promise<void>
 ```
 
-`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context.
+`RelevantContextInput` accepts `query`, `updated_after`, and routing filters. `query` is the user's task or the agent's distilled retrieval intent.
+
+`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context. Relevant context summaries may also include `match_reason`.
 
 ## Metadata Inference Contract
 

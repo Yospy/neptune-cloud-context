@@ -147,13 +147,16 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: "list_relevant_context",
     title: "List Relevant Context",
-    description: "List active context relevant to a project/workstream and optional routing filters.",
+    description:
+      "List active context relevant to a project/workstream. Pass the user's task or a distilled retrieval intent as query; use optional routing filters only when confident.",
     inputSchema: z.object({
       project_id: uuidSchema,
       target_workstream: workstreamSchema,
+      query: z.string().trim().min(1).max(contextPayloadLimits.retrievalQueryMax).optional(),
       domain: z.string().trim().min(1).optional(),
       code_area: z.string().trim().min(1).optional(),
       context_type: contextTypeSchema.optional(),
+      updated_after: z.string().datetime({ offset: true }).optional(),
       unread_only: z.boolean().default(false),
       limit: z.number().int().min(1).max(50).default(10)
     }),

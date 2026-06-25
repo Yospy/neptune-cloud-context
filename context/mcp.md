@@ -28,7 +28,7 @@ No MCP tool calls Supabase or backend fetch directly.
 ```text
 packages/mcp
 package name: neptune-context-mcp
-current published version: 0.1.4
+current published version: 0.1.6
 language: TypeScript
 transport: stdio for V1
 runtime: Node.js >=20
@@ -83,12 +83,15 @@ status = active
 Useful optional filters:
 
 ```text
+query
 domain
 code_area
 context_type
 updated_after
 unread_only
 ```
+
+`query` should be the user's task or the agent's distilled retrieval intent, for example `latest auth login API contract`. Metadata filters should narrow results only when the agent is confident.
 
 Project index lookup:
 

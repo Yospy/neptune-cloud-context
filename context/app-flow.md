@@ -156,10 +156,10 @@ User says: I am working on backend auth. Check relevant context.
 Agent determines current project from .neptune/config.json
   |
   v
-MCP calls list_relevant_context
+MCP calls list_relevant_context with a query such as "backend auth latest context"
   |
   v
-Backend filters by project, target workstream, domain, status, updated_at
+Backend filters by project/status/workstream, applies optional filters, ranks query matches, and returns match reasons
   |
   v
 Agent reads matching context

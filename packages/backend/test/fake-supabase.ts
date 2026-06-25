@@ -2,6 +2,18 @@ type Row = Record<string, any>;
 
 export type FakeTables = Record<string, Row[]>;
 
+const retrievalStopWords = new Set([
+  "latest",
+  "recent",
+  "current",
+  "context",
+  "about",
+  "related",
+  "find",
+  "get",
+  "show"
+]);
+
 let idCounter = 1;
 
 function nextId() {
@@ -25,6 +37,127 @@ function matchesContains(row: Row, filters: Array<[string, unknown[]]>) {
 
 function matchesIn(row: Row, filters: Array<[string, unknown[]]>) {
   return filters.every(([key, values]) => values.includes(row[key]));
+}
+
+function normalizeText(value: unknown) {
+  if (Array.isArray(value)) return value.join(" ").toLowerCase();
+  return String(value ?? "").toLowerCase();
+}
+
+function queryTerms(value: unknown) {
+  return normalizeText(value)
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length > 1 && !retrievalStopWords.has(term));
+}
+
+function queryScore(row: Row, query: unknown) {
+  const terms = queryTerms(query);
+  if (!terms.length) return 0;
+
+  const weighted = [
+    [row.title, 8],
+    [row.summary, 5],
+    [row.tags, 5],
+    [row.domain, 5],
+    [String(row.context_type ?? "").replace(/_/g, " "), 3],
+    [row.source_workstream, 3],
+    [row.target_workstreams, 3],
+    [row.code_areas, 3],
+    [row.repo_paths, 3],
+    [row.content_md, 1]
+  ] as const;
+
+  return terms.reduce(
+    (score, term) =>
+      score +
+      weighted.reduce(
+        (fieldScore, [value, weight]) =>
+          fieldScore + (normalizeText(value).includes(term) ? weight : 0),
+        0
+      ),
+    0
+  );
+}
+
+function searchableText(row: Row) {
+  return [
+    row.title,
+    row.summary,
+    row.tags,
+    row.domain,
+    String(row.context_type ?? "").replace(/_/g, " "),
+    row.source_workstream,
+    row.target_workstreams,
+    row.code_areas,
+    row.repo_paths,
+    row.content_md
+  ]
+    .map(normalizeText)
+    .join(" ");
+}
+
+function priorityScore(priority: unknown) {
+  if (priority === "blocking") return 4;
+  if (priority === "high") return 3;
+  if (priority === "normal") return 2;
+  if (priority === "low") return 1;
+  return 0;
+}
+
+function relevantContextRows(tables: FakeTables, args: Record<string, unknown>) {
+  const projectId = args.p_project_id;
+  const actorUserId = args.p_actor_user_id;
+  const project = (tables.projects ?? []).find((row) => row.id === projectId);
+
+  if (!project) {
+    return { data: null, error: { message: "PROJECT_NOT_FOUND" } };
+  }
+
+  const isMember = (tables.project_members ?? []).some(
+    (row) => row.project_id === projectId && row.user_id === actorUserId
+  );
+
+  if (!isMember) {
+    return { data: null, error: { message: "PROJECT_ACCESS_DENIED" } };
+  }
+
+  const query = args.p_query;
+  const terms = queryTerms(query);
+  const hasQuery = terms.length > 0;
+  const limit = Math.max(1, Math.min(Number(args.p_limit ?? 10), 50));
+
+  const rows = (tables.contexts ?? [])
+    .filter((row) => row.project_id === projectId)
+    .filter((row) => row.status === "active")
+    .filter((row) => Array.isArray(row.target_workstreams) && row.target_workstreams.includes(args.p_target_workstream))
+    .filter((row) => !args.p_domain || row.domain === args.p_domain)
+    .filter((row) => !args.p_context_type || row.context_type === args.p_context_type)
+    .filter((row) => !args.p_code_area || row.code_areas?.includes(args.p_code_area))
+    .filter((row) => !args.p_updated_after || row.updated_at >= args.p_updated_after)
+    .filter(
+      (row) =>
+        !args.p_unread_only ||
+        !(tables.context_reads ?? []).some(
+          (read) => read.context_id === row.id && read.user_id === actorUserId
+        )
+    )
+    .map((row) => ({ ...row, __score: hasQuery ? queryScore(row, query) : 0 }))
+    .filter((row) => !hasQuery || terms.every((term) => searchableText(row).includes(term)))
+    .sort((a, b) => {
+      if (b.__score !== a.__score) return b.__score - a.__score;
+      const priorityDelta = priorityScore(b.priority) - priorityScore(a.priority);
+      if (priorityDelta !== 0) return priorityDelta;
+      const confidenceDelta = Number(b.confidence_score ?? 0) - Number(a.confidence_score ?? 0);
+      if (confidenceDelta !== 0) return confidenceDelta;
+      return String(b.updated_at).localeCompare(String(a.updated_at));
+    })
+    .slice(0, limit)
+    .map(({ __score, ...row }) => ({
+      ...row,
+      match_reason: hasQuery ? "Matched query by full-text search." : "Matched routing filters; ordered by latest update."
+    }));
+
+  return { data: rows, error: null };
 }
 
 class FakeQuery {
@@ -185,7 +318,10 @@ export function createFakeSupabase(tables: FakeTables) {
     from(tableName: string) {
       return new FakeQuery(tables, tableName);
     },
-    async rpc() {
+    async rpc(fn: string, args: Record<string, unknown> = {}) {
+      if (fn === "neptune_list_relevant_context") {
+        return relevantContextRows(tables, args);
+      }
       throw new Error("RPC is not implemented by createFakeSupabase.");
     }
   };

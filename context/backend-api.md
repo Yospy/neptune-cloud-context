@@ -163,7 +163,33 @@ tags <= 25 items, each <= 80 chars
 repo_paths <= 50 items, each <= 500 chars
 related_files <= 50 items, each <= 500 chars
 inference_notes <= 1000 chars
+retrieval query <= 500 chars
 ```
+
+## Relevant Context Query
+
+`GET /contexts/relevant` is the agent-facing retrieval endpoint.
+
+Required query params:
+
+```text
+project_id
+target_workstream
+```
+
+Optional query params:
+
+```text
+query
+domain
+code_area
+context_type
+updated_after
+unread_only
+limit
+```
+
+The backend hard-filters by project membership, active status, and target workstream. Optional metadata narrows the candidate set. When `query` is present, Postgres full-text ranking orders the candidates and summaries include `match_reason`.
 
 ## Upload Receipt Response
 

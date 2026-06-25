@@ -33,6 +33,7 @@ export const contextPayloadLimits = {
   repoPathMax: 500,
   relatedFilesMax: 50,
   relatedFileMax: 500,
+  retrievalQueryMax: 500,
   inferenceNotesMax: 1_000
 } as const;
 
@@ -91,9 +92,11 @@ export const createContextRequestSchema = z.object({
 export const relevantContextQuerySchema = z.object({
   project_id: z.string().uuid(),
   target_workstream: workstreamSchema,
+  query: z.string().trim().min(1).max(contextPayloadLimits.retrievalQueryMax).optional(),
   domain: z.string().trim().min(1).optional(),
   code_area: z.string().trim().min(1).optional(),
   context_type: contextTypeSchema.optional(),
+  updated_after: z.string().datetime({ offset: true }).optional(),
   unread_only: z
     .preprocess((value) => {
       if (value === "true") return true;
