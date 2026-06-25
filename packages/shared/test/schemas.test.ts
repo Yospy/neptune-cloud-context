@@ -144,6 +144,22 @@ describe("shared schemas", () => {
     expect(parsed.limit).toBe(1);
   });
 
+  it("validates agent intent relevant context queries", () => {
+    const parsed = relevantContextQuerySchema.parse({
+      project_id: projectId,
+      target_workstream: "backend",
+      query: "latest auth login API contract",
+      updated_after: "2026-06-23T10:00:00.000Z",
+      unread_only: "false",
+      limit: "5"
+    });
+
+    expect(parsed.query).toBe("latest auth login API contract");
+    expect(parsed.updated_after).toBe("2026-06-23T10:00:00.000Z");
+    expect(parsed.unread_only).toBe(false);
+    expect(parsed.limit).toBe(5);
+  });
+
   it("exports stable error codes", () => {
     expect(errorCodes).toContain("AUTH_REQUIRED");
     expect(errorCodes).toContain("ORG_NOT_FOUND");

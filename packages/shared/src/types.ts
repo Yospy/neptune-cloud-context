@@ -80,6 +80,7 @@ export type ContextSummary = {
   updated_at: string;
   version: number;
   content_hash: string;
+  match_reason?: string;
   created_by_user: UserProfile;
   updated_by_user: UserProfile;
 };

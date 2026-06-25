@@ -512,6 +512,139 @@ describe("SupabaseContextRepository", () => {
     });
   });
 
+  it("ranks query matches ahead of newer generic contexts", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Auth Login API Contract",
+        summary: "Backend login endpoint accepts email and password.",
+        content_md: "# Auth Login API Contract\n\nThe API returns access and refresh tokens.",
+        content_hash: "sha256:auth-api",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "api_contract",
+        priority: "normal",
+        status: "active",
+        repo_paths: ["packages/backend/src/app.ts"],
+        related_files: [],
+        tags: ["auth", "login", "api"],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Recent Build Notes",
+        summary: "Latest packaging and release notes.",
+        content_md: "# Recent Build Notes\n\nPackage metadata changed.",
+        content_hash: "sha256:build",
+        source_workstream: "infra",
+        target_workstreams: ["backend"],
+        domain: "infra",
+        code_areas: ["build"],
+        context_type: "implementation_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: ["package.json"],
+        related_files: [],
+        tags: ["release"],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:10:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.listRelevantContext(
+      {
+        project_id: projectId,
+        target_workstream: "backend",
+        query: "latest backend auth login API contract",
+        unread_only: false,
+        limit: 2
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual(["Auth Login API Contract"]);
+    expect(contexts[0].match_reason).toContain("Matched query");
+  });
+
+  it("filters relevant contexts by updated_after", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Older Auth",
+        summary: "Older relevant context.",
+        content_md: "# Older Auth",
+        content_hash: "sha256:older",
+        source_workstream: "frontend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "ui_contract",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Newer Auth",
+        summary: "Newer relevant context.",
+        content_md: "# Newer Auth",
+        content_hash: "sha256:newer",
+        source_workstream: "frontend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "ui_contract",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:03:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.listRelevantContext(
+      {
+        project_id: projectId,
+        target_workstream: "backend",
+        updated_after: "2026-05-16T12:02:00.000Z",
+        unread_only: false,
+        limit: 10
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual(["Newer Auth"]);
+  });
+
   it("returns publisher identity on direct context reads", async () => {
     const repo = new SupabaseContextRepository(createFakeSupabase(contextTables()));
 
@@ -579,6 +712,64 @@ describe("SupabaseContextRepository", () => {
     );
 
     expect(contexts).toEqual([]);
+  });
+
+  it("returns older unread contexts when newer candidates were already read", async () => {
+    const tables = baseTables();
+    for (let index = 0; index < 60; index += 1) {
+      const id = `aaaaaaaa-aaaa-4aaa-8aaa-${String(index).padStart(12, "0")}`;
+      tables.contexts.push({
+        id,
+        org_id: orgId,
+        project_id: projectId,
+        title: `Backend Context ${index}`,
+        summary: "Relevant backend context.",
+        content_md: "# Backend Context",
+        content_hash: `sha256:${index}`,
+        source_workstream: "frontend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "ui_contract",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: `2026-05-16T12:${String(59 - index).padStart(2, "0")}:00.000Z`,
+        version: 1
+      });
+      if (index < 55) {
+        tables.context_reads.push({
+          context_id: id,
+          org_id: orgId,
+          project_id: projectId,
+          user_id: userId,
+          agent_name: "codex"
+        });
+      }
+    }
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.listRelevantContext(
+      {
+        project_id: projectId,
+        target_workstream: "backend",
+        unread_only: true,
+        limit: 5
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual([
+      "Backend Context 55",
+      "Backend Context 56",
+      "Backend Context 57",
+      "Backend Context 58",
+      "Backend Context 59"
+    ]);
   });
 
   it("marks contexts referenced through an RPC", async () => {

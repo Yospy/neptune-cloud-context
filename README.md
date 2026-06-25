@@ -22,10 +22,10 @@ sample.py           OpenAI Responses API + MCP smoke test
 Published npm packages:
 
 ```text
-neptune-context-shared  0.1.2
-neptune-context         0.1.4
-neptune-context-mcp     0.1.4
-neptune-context-cli     0.1.7
+neptune-context-shared  0.1.4
+neptune-context         0.1.6
+neptune-context-mcp     0.1.6
+neptune-context-cli     0.1.9
 ```
 
 ## Architecture
@@ -193,6 +193,12 @@ Lookup flow:
 require_project_binding
 -> list_relevant_context(context_type=project_index, target_workstream=general, limit=1)
 -> get_context(index_id)
+```
+
+For specific work, agents can pass intent directly:
+
+```text
+list_relevant_context(query="latest auth login API contract", target_workstream=backend, limit=5)
 ```
 
 ## Environment

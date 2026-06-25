@@ -6,10 +6,10 @@ Updated: 2026-05-23
 
 ```text
 Backend: running locally on http://127.0.0.1:8787
-CLI: neptune-context-cli@0.1.7
-SDK: neptune-context@0.1.4
-Shared package: neptune-context-shared@0.1.2
-MCP: neptune-context-mcp@0.1.4, stdio transport
+CLI: neptune-context-cli@0.1.9
+SDK: neptune-context@0.1.6
+Shared package: neptune-context-shared@0.1.4
+MCP: neptune-context-mcp@0.1.6, stdio transport
 Installer: neptune mcp install for Codex and Claude Code
 Setup: neptune setup for login/org/project/repo binding/MCP install
 Doctor: neptune doctor for Node/auth/backend/binding/MCP checks
@@ -42,7 +42,7 @@ MCP package with exact 5 context-work tools
 OpenAI sample.py chat-style MCP tester
 npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
-CLI package rename/public metadata: neptune-context-cli@0.1.7
+CLI package rename/public metadata: neptune-context-cli@0.1.9
 neptune mcp install --target codex|claude|all with --dry-run
 neptune setup with flags/prompts for first-user onboarding
 neptune doctor diagnostics for local install health
@@ -119,10 +119,10 @@ neptune doctor now defaults to real child_process execFile for Claude config che
 Publish/final install verification:
 
 ```text
-neptune-context-shared@0.1.2  published
-neptune-context@0.1.4         published
-neptune-context-mcp@0.1.4     published
-neptune-context-cli@0.1.7     published
+neptune-context-shared@0.1.4  release target
+neptune-context@0.1.6         release target
+neptune-context-mcp@0.1.6     release target
+neptune-context-cli@0.1.9     release target
 fresh npm install             passed, 107 packages, 0 vulnerabilities
 neptune --help                passed from fresh install
 neptune mcp install dry-run   passed from fresh install

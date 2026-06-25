@@ -186,6 +186,31 @@ describe("Neptune MCP tools", () => {
     );
   });
 
+  it("accepts agent intent query filters for list_relevant_context", async () => {
+    const deps = createMockDeps();
+    const result = await callNeptuneTool(
+      "list_relevant_context",
+      {
+        project_id: "22222222-2222-4222-8222-222222222222",
+        target_workstream: "backend",
+        query: "latest auth login API contract",
+        updated_after: "2026-06-23T10:00:00.000Z",
+        limit: 5
+      },
+      deps
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(deps.client?.listRelevantContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target_workstream: "backend",
+        query: "latest auth login API contract",
+        updated_after: "2026-06-23T10:00:00.000Z",
+        limit: 5
+      })
+    );
+  });
+
   it("returns MCP tool errors for invalid input", async () => {
     const result = await callNeptuneTool("get_context", { context_id: "not-a-uuid" }, createMockDeps());
 

@@ -255,6 +255,7 @@ neptune_sync_auth_user_profile
 neptune_create_org
 neptune_create_project
 neptune_upsert_context
+neptune_list_relevant_context
 neptune_reference_context
 neptune_resolve_context
 ```
@@ -263,32 +264,38 @@ The old `agentctx_*` functions have been removed from the live DB.
 
 ## Query Patterns
 
-Latest context for backend auth:
+Latest ranked context for backend auth:
 
 ```sql
 select *
-from contexts
-where project_id = :project_id
-  and 'backend' = any(target_workstreams)
-  and domain = 'auth'
-  and status = 'active'
-order by updated_at desc
-limit 5;
+from neptune_list_relevant_context(
+  :user_id,
+  :project_id,
+  'backend',
+  'auth login API contract',
+  'auth',
+  null,
+  null,
+  null,
+  false,
+  5
+);
 ```
 
 Unread context for current user:
 
 ```sql
-select c.*
-from contexts c
-where c.project_id = :project_id
-  and :workstream = any(c.target_workstreams)
-  and c.status = 'active'
-  and not exists (
-    select 1
-    from context_reads r
-    where r.context_id = c.id
-      and r.user_id = :user_id
-  )
-order by c.updated_at desc;
+select *
+from neptune_list_relevant_context(
+  :user_id,
+  :project_id,
+  :workstream,
+  null,
+  null,
+  null,
+  null,
+  null,
+  true,
+  10
+);
 ```

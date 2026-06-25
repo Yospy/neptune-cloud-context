@@ -2,13 +2,23 @@
 
 ## Active Sprint
 
-`sprints/2026-06-19-neptune-security-hardening.md`
+`sprints/2026-06-23-agent-intent-retrieval.md`
 
 ## Previous Sprint
 
 `sprints/2026-05-21-cli-name-create-commands.md`
 
 ## Tasks
+
+- [x] Create agent intent retrieval sprint plan.
+- [x] Extend shared retrieval contracts.
+- [x] Add database retrieval RPC and indexes.
+- [x] Wire backend repository to ranked retrieval.
+- [x] Update MCP tool schema and docs.
+- [x] Add query, updated_after, unread, and match_reason tests.
+- [x] Run focused and workspace verification.
+- [x] Run independent subagent verification.
+- [x] Review diff, side effects, and publish commands.
 
 - [x] Create Neptune security hardening sprint plan.
 - [x] Add cross-org/project authorization fixtures.
