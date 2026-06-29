@@ -6,6 +6,7 @@ import type {
   CreateContextRequest,
   CreateProjectRequest,
   CreateProjectResponse,
+  DeleteProjectResponse,
   ErrorCode,
   ListOrgMembersResponse,
   ListOrgsResponse,
@@ -15,6 +16,7 @@ import type {
   MarkContextReferencedRequest,
   MeResponse,
   RelevantContextQuery,
+  RetrieveContextQuery,
   ResolveContextRequest,
   UploadReceiptResponse
 } from "neptune-context-shared";
@@ -71,6 +73,10 @@ export type ContextRepository = {
     input: CreateProjectRequest,
     user: AuthenticatedUser
   ) => Promise<CreateProjectResponse>;
+  deleteProject: (
+    projectId: string,
+    user: AuthenticatedUser
+  ) => Promise<DeleteProjectResponse>;
   listProjectMembers: (
     projectId: string,
     user: AuthenticatedUser
@@ -81,6 +87,10 @@ export type ContextRepository = {
   ) => Promise<UploadReceiptResponse>;
   listRelevantContext: (
     query: RelevantContextQuery,
+    user: AuthenticatedUser
+  ) => Promise<ContextSummary[]>;
+  retrieveContext: (
+    query: RetrieveContextQuery,
     user: AuthenticatedUser
   ) => Promise<ContextSummary[]>;
   getContext: (contextId: string, user: AuthenticatedUser) => Promise<ContextRecord>;

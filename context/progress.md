@@ -1,15 +1,15 @@
 # Progress Snapshot
 
-Updated: 2026-05-23
+Updated: 2026-06-29
 
 ## Current State
 
 ```text
 Backend: running locally on http://127.0.0.1:8787
-CLI: neptune-context-cli@0.1.9
-SDK: neptune-context@0.1.6
-Shared package: neptune-context-shared@0.1.4
-MCP: neptune-context-mcp@0.1.6, stdio transport
+CLI: neptune-context-cli@0.1.11
+SDK: neptune-context@0.1.9
+Shared package: neptune-context-shared@0.1.6
+MCP: neptune-context-mcp@0.1.7, stdio transport
 Installer: neptune mcp install for Codex and Claude Code
 Setup: neptune setup for login/org/project/repo binding/MCP install
 Doctor: neptune doctor for Node/auth/backend/binding/MCP checks
@@ -42,26 +42,27 @@ MCP package with exact 5 context-work tools
 OpenAI sample.py chat-style MCP tester
 npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
-CLI package rename/public metadata: neptune-context-cli@0.1.9
+CLI package rename/public metadata: neptune-context-cli@0.1.11
 neptune mcp install --target codex|claude|all with --dry-run
 neptune setup with flags/prompts for first-user onboarding
 neptune doctor diagnostics for local install health
+neptune org/project binding commands and project deletion
+smart context retrieval through GET /contexts/retrieve and MCP retrieve_context
 ```
 
 ## Latest Regression
 
 ```text
-corepack pnpm --filter @neptune/backend test      passed
-corepack pnpm --filter neptune-context test       passed
-corepack pnpm --filter neptune-context-mcp test   passed
-corepack pnpm --filter neptune-context-cli test   passed, 28 tests
+corepack pnpm --filter @neptune/backend test      passed, 63 tests plus 1 skipped integration
+corepack pnpm --filter neptune-context test       passed, 30 tests
+corepack pnpm --filter neptune-context-mcp test   passed, 24 tests
+corepack pnpm --filter neptune-context-cli test   passed, 42 tests
 corepack pnpm typecheck                           passed
 corepack pnpm test                                passed
 corepack pnpm build                               passed
-pnpm pack + clean install smoke                   passed
-local MCP stdio tools/list                        passed with Node 23
-live CLI me/orgs against backend 8787             passed
-local MCP stdio tools/list                        passed with exact 5 tools
+pnpm pack                                         passed for shared 0.1.6, SDK 0.1.9, MCP 0.1.7
+local MCP stdio tools/list                        passed with retrieve_context
+live SQL neptune_retrieve_context probes          passed
 ```
 
 ## Latest Live Backend Edge Case
@@ -119,10 +120,10 @@ neptune doctor now defaults to real child_process execFile for Claude config che
 Publish/final install verification:
 
 ```text
-neptune-context-shared@0.1.4  release target
-neptune-context@0.1.6         release target
+neptune-context-shared@0.1.5  release target
+neptune-context@0.1.8         release target
 neptune-context-mcp@0.1.6     release target
-neptune-context-cli@0.1.9     release target
+neptune-context-cli@0.1.11    release target
 fresh npm install             passed, 107 packages, 0 vulnerabilities
 neptune --help                passed from fresh install
 neptune mcp install dry-run   passed from fresh install
@@ -143,6 +144,8 @@ Logs confirmed:
 POST /orgs duplicate      409 CONFLICT
 POST /projects create     200
 POST /projects duplicate  409 CONFLICT
+DELETE /projects admin    200
+DELETE /projects nonadmin 403 PROJECT_ACCESS_DENIED
 ```
 
 MCP preserves this as structured `isError` content:

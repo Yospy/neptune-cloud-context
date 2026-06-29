@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { getFileMode, loadConfig, writeConfig } from "../src/config.js";
+import { clearStoredAuth, getFileMode, loadConfig, writeConfig } from "../src/config.js";
 
 describe("SDK config storage", () => {
   it("writes config as a private user file", async () => {
@@ -13,6 +13,10 @@ describe("SDK config storage", () => {
       await writeConfig(
         {
           apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
           auth: {
             accessToken: "access",
             refreshToken: "refresh",
@@ -25,6 +29,9 @@ describe("SDK config storage", () => {
       );
 
       await expect(loadConfig(configPath)).resolves.toMatchObject({
+        defaultOrg: {
+          org_slug: "acme"
+        },
         auth: {
           user: { email: "user@example.com" }
         }
@@ -37,6 +44,39 @@ describe("SDK config storage", () => {
 
   it("returns an empty config when the file does not exist", async () => {
     await expect(loadConfig(join(tmpdir(), "neptune-missing-config.json"))).resolves.toEqual({});
+  });
+
+  it("clears auth-scoped default org on logout", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-context-"));
+    const configPath = join(dir, "home", ".neptune", "config.json");
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access",
+            refreshToken: "refresh",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1", email: "user@example.com" }
+          }
+        },
+        configPath
+      );
+
+      await clearStoredAuth(configPath);
+
+      await expect(loadConfig(configPath)).resolves.toEqual({
+        apiUrl: "http://127.0.0.1:8787"
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("migrates a legacy local config when the Neptune config is missing", async () => {

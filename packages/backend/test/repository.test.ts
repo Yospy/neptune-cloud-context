@@ -373,6 +373,26 @@ describe("SupabaseContextRepository", () => {
     ]);
   });
 
+  it("deletes projects for project admins", async () => {
+    const tables = baseTables();
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    await expect(repo.deleteProject(projectId, { id: userId })).resolves.toEqual({ ok: true });
+
+    expect(tables.projects).toEqual([]);
+  });
+
+  it("denies project deletion for non-admin project members", async () => {
+    const tables = baseTables();
+    tables.project_members[0].role = "editor";
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    await expect(repo.deleteProject(projectId, { id: userId })).rejects.toMatchObject({
+      code: "PROJECT_ACCESS_DENIED"
+    });
+    expect(tables.projects).toHaveLength(1);
+  });
+
   it("lists project members with product profiles", async () => {
     const repo = new SupabaseContextRepository(createFakeSupabase(baseTables()));
 
@@ -577,6 +597,279 @@ describe("SupabaseContextRepository", () => {
 
     expect(contexts.map((context) => context.title)).toEqual(["Auth Login API Contract"]);
     expect(contexts[0].match_reason).toContain("Matched query");
+  });
+
+  it("retrieves recent active context project-wide without a workstream", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Backend Auth Contract",
+        summary: "Backend auth API details.",
+        content_md: "# Backend Auth Contract",
+        content_hash: "sha256:auth",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "api_contract",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Recent Release Notes",
+        summary: "Latest package and deploy context.",
+        content_md: "# Recent Release Notes",
+        content_hash: "sha256:release",
+        source_workstream: "docs",
+        target_workstreams: ["docs", "general"],
+        domain: "release",
+        code_areas: ["cli"],
+        context_type: "implementation_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:05:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        intent: "latest context",
+        mode: "smart",
+        limit: 2
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual([
+      "Recent Release Notes",
+      "Backend Auth Contract"
+    ]);
+    expect(contexts[0]).toMatchObject({
+      match_kind: "recent",
+      match_reason: expect.stringContaining("recent active project context")
+    });
+  });
+
+  it("falls back to recent project context for typo intent misses", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Older Auth Notes",
+        summary: "Auth setup details.",
+        content_md: "# Older Auth Notes",
+        content_hash: "sha256:older",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "auth",
+        code_areas: ["login"],
+        context_type: "setup_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Newest Context Upload",
+        summary: "The most recent active note.",
+        content_md: "# Newest Context Upload",
+        content_hash: "sha256:newest",
+        source_workstream: "docs",
+        target_workstreams: ["docs"],
+        domain: "ops",
+        code_areas: ["mcp"],
+        context_type: "implementation_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:07:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        intent: "elitist context",
+        mode: "smart",
+        limit: 1
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual(["Newest Context Upload"]);
+    expect(contexts[0].match_kind).toBe("recent");
+  });
+
+  it("uses smart routing hints as boosts instead of filters", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Backend Binding Notes",
+        summary: "Backend project binding details.",
+        content_md: "# Backend Binding Notes",
+        content_hash: "sha256:backend",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "binding",
+        code_areas: ["project-binding"],
+        context_type: "implementation_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Newer Docs Note",
+        summary: "Newer docs-only context.",
+        content_md: "# Newer Docs Note",
+        content_hash: "sha256:docs",
+        source_workstream: "docs",
+        target_workstreams: ["docs"],
+        domain: "docs",
+        code_areas: ["readme"],
+        context_type: "setup_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:08:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        mode: "smart",
+        target_workstream: "backend",
+        limit: 2
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual([
+      "Backend Binding Notes",
+      "Newer Docs Note"
+    ]);
+    expect(contexts[0].match_kind).toBe("hint");
+  });
+
+  it("applies routing filters in strict retrieval mode", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Backend Binding Notes",
+        summary: "Backend project binding details.",
+        content_md: "# Backend Binding Notes",
+        content_hash: "sha256:backend",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "binding",
+        code_areas: ["project-binding"],
+        context_type: "implementation_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Docs Binding Notes",
+        summary: "Docs project binding details.",
+        content_md: "# Docs Binding Notes",
+        content_hash: "sha256:docs",
+        source_workstream: "docs",
+        target_workstreams: ["docs"],
+        domain: "binding",
+        code_areas: ["project-binding"],
+        context_type: "implementation_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:08:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        mode: "strict",
+        target_workstream: "backend",
+        domain: "binding",
+        limit: 10
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual(["Backend Binding Notes"]);
   });
 
   it("filters relevant contexts by updated_after", async () => {

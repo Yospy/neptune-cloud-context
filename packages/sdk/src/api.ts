@@ -4,6 +4,7 @@ import type {
   CreateOrgResponse,
   CreateProjectRequest,
   CreateProjectResponse,
+  DeleteProjectResponse,
   GetContextResponse,
   ListOrgMembersResponse,
   ListOrgsResponse,
@@ -17,6 +18,8 @@ import type {
   MeResponse,
   RelevantContextQuery,
   RelevantContextResponse,
+  RetrieveContextQuery,
+  RetrieveContextResponse,
   ResolveContextRequest,
   ResolveContextResponse,
   UploadReceiptResponse
@@ -185,6 +188,16 @@ export function createProject(input: CreateProjectRequest, options: NeptuneClien
   );
 }
 
+export function deleteProject(projectId: string, options: NeptuneClientOptions = {}) {
+  return apiRequest<DeleteProjectResponse>(
+    `/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: "DELETE"
+    },
+    options
+  );
+}
+
 export function listProjectMembers(projectId: string, options: NeptuneClientOptions = {}) {
   return apiRequest<ListProjectMembersResponse>(
     `/projects/${encodeURIComponent(projectId)}/members`,
@@ -206,6 +219,10 @@ export function createContext(input: CreateContextRequest, options: NeptuneClien
 
 export function listRelevantContext(query: RelevantContextQuery, options: NeptuneClientOptions = {}) {
   return apiRequest<RelevantContextResponse>(`/contexts/relevant${queryString(query)}`, {}, options);
+}
+
+export function retrieveContext(query: RetrieveContextQuery, options: NeptuneClientOptions = {}) {
+  return apiRequest<RetrieveContextResponse>(`/contexts/retrieve${queryString(query)}`, {}, options);
 }
 
 export function getContext(contextId: string, options: NeptuneClientOptions = {}) {
@@ -266,9 +283,11 @@ export function createNeptuneClient(options: NeptuneClientOptions = {}) {
     listOrgMembers: (orgId: string) => listOrgMembers(orgId, options),
     listProjects: (query?: ListProjectsQuery) => listProjects(query, options),
     createProject: (input: CreateProjectRequest) => createProject(input, options),
+    deleteProject: (projectId: string) => deleteProject(projectId, options),
     listProjectMembers: (projectId: string) => listProjectMembers(projectId, options),
     createContext: (input: CreateContextRequest) => createContext(input, options),
     listRelevantContext: (query: RelevantContextQuery) => listRelevantContext(query, options),
+    retrieveContext: (query: RetrieveContextQuery) => retrieveContext(query, options),
     getContext: (contextId: string) => getContext(contextId, options),
     markContextRead: (contextId: string, input: Partial<MarkContextReadRequest> = {}) =>
       markContextRead(contextId, input, options),

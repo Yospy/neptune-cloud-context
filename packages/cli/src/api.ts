@@ -1,6 +1,7 @@
 export {
   apiRequest,
   createContext,
+  deleteProject,
   createNeptuneClient,
   createOrg,
   createProject,

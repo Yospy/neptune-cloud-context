@@ -80,6 +80,8 @@ export type ContextSummary = {
   updated_at: string;
   version: number;
   content_hash: string;
+  score?: number;
+  match_kind?: "full_text" | "hint" | "recent";
   match_reason?: string;
   created_by_user: UserProfile;
   updated_by_user: UserProfile;
@@ -94,6 +96,11 @@ export type ContextRecord = ContextSummary & {
 };
 
 export type RelevantContextResponse = {
+  ok: true;
+  contexts: ContextSummary[];
+};
+
+export type RetrieveContextResponse = {
   ok: true;
   contexts: ContextSummary[];
 };
@@ -125,6 +132,10 @@ export type ListProjectsResponse = {
 export type CreateProjectResponse = {
   ok: true;
   project: ProjectSummary;
+};
+
+export type DeleteProjectResponse = {
+  ok: true;
 };
 
 export type MeResponse = {

@@ -44,6 +44,7 @@ function createMockDeps(): NeptuneToolDeps {
         updated_by_user: userProfile
       }
     })),
+    retrieveContext: vi.fn(async () => ({ ok: true, contexts: [] })),
     listRelevantContext: vi.fn(async () => ({ ok: true, contexts: [] })),
     getContext: vi.fn(async () => ({ ok: true, context: { id: "ctx-1" } })),
     markContextReferenced: vi.fn(async () => ({ ok: true }))
@@ -90,6 +91,31 @@ function oversizedArray(maxItems: number, value: string) {
 describe("Neptune MCP tools", () => {
   it("defines the exact V1 tool names", () => {
     expect(toolDefinitions.map((tool) => tool.name)).toEqual([...NEPTUNE_TOOL_NAMES]);
+  });
+
+  it("maps smart retrieve_context to the SDK client", async () => {
+    const deps = createMockDeps();
+    const result = await callNeptuneTool(
+      "retrieve_context",
+      {
+        project_id: "22222222-2222-4222-8222-222222222222",
+        intent: "latest uploaded context",
+        target_workstream: "backend",
+        limit: 5
+      },
+      deps
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(deps.client?.retrieveContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_id: "22222222-2222-4222-8222-222222222222",
+        intent: "latest uploaded context",
+        mode: "smart",
+        target_workstream: "backend",
+        limit: 5
+      })
+    );
   });
 
   it("maps require_project_binding to the SDK project binding helper", async () => {

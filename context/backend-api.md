@@ -72,6 +72,7 @@ GET  /orgs/:org_id/members
 
 GET  /projects
 POST /projects
+DELETE /projects/:project_id
 GET  /projects/:project_id/members
 
 POST /contexts
@@ -191,6 +192,32 @@ limit
 
 The backend hard-filters by project membership, active status, and target workstream. Optional metadata narrows the candidate set. When `query` is present, Postgres full-text ranking orders the candidates and summaries include `match_reason`.
 
+## Smart Context Retrieval
+
+`GET /contexts/retrieve` is the default agent-facing retrieval endpoint for natural user intent.
+
+Required query params:
+
+```text
+project_id
+```
+
+Optional query params:
+
+```text
+intent
+mode = smart | strict
+target_workstream
+domain
+code_area
+context_type
+limit
+```
+
+Default `smart` mode hard-filters only by project membership, active status, and project ID. Intent and routing metadata are ranking signals, so vague requests like "latest context", "uploaded today", or rough keywords still return recent active project candidates instead of false-empty results.
+
+`strict` mode applies routing metadata and full-text matches as hard filters for callers that need legacy exactness.
+
 ## Upload Receipt Response
 
 ```json
@@ -277,6 +304,7 @@ GET /orgs/:org_id/members                    200
 GET /projects/:project_id/members            200
 POST /orgs                                   200
 POST /projects                               200
+DELETE /projects/:project_id                 200
 POST /contexts                               200
 GET /contexts/relevant                       200
 GET /contexts/:context_id                    200
@@ -293,6 +321,8 @@ Latest live duplicate-slug verification:
 POST /orgs duplicate      409 CONFLICT
 POST /projects create     200
 POST /projects duplicate  409 CONFLICT
+DELETE /projects admin    200
+DELETE /projects nonadmin 403 PROJECT_ACCESS_DENIED
 user_id                   affeda20-1095-4e6c-9506-17bd7c0720dd
 ```
 

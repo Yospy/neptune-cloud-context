@@ -38,6 +38,7 @@ runtime: Node.js >=20
 
 ```text
 require_project_binding
+retrieve_context
 list_relevant_context
 get_context
 create_context
@@ -68,9 +69,24 @@ Use after metadata is known.
 
 Must return a deterministic upload receipt.
 
+### retrieve_context
+
+Use first for natural user intent and broad project discovery. This tool requires only `project_id`; `intent` and routing fields are optional ranking hints in default `smart` mode.
+
+Good requests:
+
+```text
+latest context
+uploaded today
+that project delete doc
+rough or typo-prone user keywords
+```
+
+Use `mode = strict` only when the caller explicitly needs routing metadata to be hard filters.
+
 ### list_relevant_context
 
-Use first to find a project index, and before implementation work when the user mentions a domain, workstream, feature, or "latest context".
+Use for strict legacy workstream-scoped retrieval and project-index lookup.
 
 Required filters:
 
@@ -91,7 +107,7 @@ updated_after
 unread_only
 ```
 
-`query` should be the user's task or the agent's distilled retrieval intent, for example `latest auth login API contract`. Metadata filters should narrow results only when the agent is confident.
+`query` should be the user's task or the agent's distilled retrieval intent, for example `latest auth login API contract`. Metadata filters narrow results; use `retrieve_context` when broad discovery is needed.
 
 Project index lookup:
 
@@ -118,7 +134,7 @@ Do not ask the user to manually tag people.
 Prefer project binding from .neptune/config.json.
 Ask a confirmation only when project or routing confidence is low.
 Always show upload receipts exactly.
-Before frontend/backend contract work, call list_relevant_context.
+Before frontend/backend contract work, call retrieve_context.
 After using context in implementation, call mark_context_referenced.
 ```
 

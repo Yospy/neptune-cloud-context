@@ -156,6 +156,7 @@ The MCP surface is intentionally small:
 
 ```text
 require_project_binding
+retrieve_context
 list_relevant_context
 get_context
 create_context
@@ -191,15 +192,17 @@ Lookup flow:
 
 ```text
 require_project_binding
--> list_relevant_context(context_type=project_index, target_workstream=general, limit=1)
+-> retrieve_context(intent="project index", context_type=project_index, limit=1)
 -> get_context(index_id)
 ```
 
-For specific work, agents can pass intent directly:
+For specific work, agents should pass natural intent to smart retrieval:
 
 ```text
-list_relevant_context(query="latest auth login API contract", target_workstream=backend, limit=5)
+retrieve_context(intent="latest auth login API contract", target_workstream=backend, limit=5)
 ```
+
+`list_relevant_context` remains available for strict workstream-scoped retrieval.
 
 ## Environment
 

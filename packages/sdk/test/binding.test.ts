@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadProjectBinding, requireProjectBinding, writeProjectBinding } from "../src/config.js";
+import { loadProjectBinding, removeProjectBinding, requireProjectBinding, writeProjectBinding } from "../src/config.js";
 
 describe("SDK project binding", () => {
   it("returns null when a repo is not bound", async () => {
@@ -47,6 +47,28 @@ describe("SDK project binding", () => {
       await expect(requireProjectBinding(dir)).rejects.toMatchObject({
         code: "PROJECT_NOT_BOUND"
       });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("removes a repo binding", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-binding-"));
+
+    try {
+      await writeProjectBinding(
+        {
+          org_slug: "acme",
+          project_slug: "checkout",
+          project_id: "22222222-2222-4222-8222-222222222222",
+          default_workstream: "backend"
+        },
+        dir
+      );
+
+      await removeProjectBinding(dir);
+
+      await expect(loadProjectBinding(dir)).resolves.toBeNull();
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

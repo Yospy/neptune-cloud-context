@@ -37,10 +37,10 @@ implemented:
   Neptune DB RPC rename using neptune_* functions
   SDK package foundation for config/session/API/binding/metadata/receipts
   deterministic SDK metadata inference
-  public npm package neptune-context-shared@0.1.4
-  public npm package neptune-context@0.1.6
+  public npm package neptune-context-shared@0.1.5
+  public npm package neptune-context@0.1.8
   public npm package neptune-context-mcp@0.1.6 with 5 context-work tools
-  public npm package neptune-context-cli@0.1.9 with neptune binary
+  public npm package neptune-context-cli@0.1.11 with neptune binary
   neptune mcp install for Codex and Claude Code
   neptune setup for login/org/project/repo binding/MCP install
   neptune doctor for local install diagnostics
@@ -64,9 +64,9 @@ Latest regression status:
 
 ```text
 corepack pnpm --filter @neptune/backend test       passed
-corepack pnpm --filter neptune-context test        passed
+corepack pnpm --filter neptune-context test        passed, 29 tests
 corepack pnpm --filter neptune-context-mcp test    passed
-corepack pnpm --filter neptune-context-cli test    passed, 28 tests
+corepack pnpm --filter neptune-context-cli test    passed, 42 tests
 corepack pnpm typecheck                            passed
 corepack pnpm test                                 passed
 corepack pnpm build                                passed

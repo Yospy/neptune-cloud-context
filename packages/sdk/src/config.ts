@@ -16,10 +16,16 @@ export type StoredAuth = {
   };
 };
 
+export type OrgBinding = {
+  org_id: string;
+  org_slug: string;
+};
+
 export type NeptuneConfig = {
   apiUrl?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
+  defaultOrg?: OrgBinding;
   auth?: StoredAuth;
 };
 
@@ -104,7 +110,7 @@ export async function updateConfig(
 export async function clearStoredAuth(configPath = defaultConfigPath()) {
   return updateConfig(
     (config) => {
-      const { auth: _auth, ...rest } = config;
+      const { auth: _auth, defaultOrg: _defaultOrg, ...rest } = config;
       return rest;
     },
     configPath
@@ -176,4 +182,8 @@ export async function writeProjectBinding(
   await mkdir(dirname(bindingPath), { recursive: true });
   await writeFile(bindingPath, `${JSON.stringify(binding, null, 2)}\n`, { mode: 0o644 });
   return binding;
+}
+
+export async function removeProjectBinding(cwd = process.cwd()) {
+  await rm(projectBindingPath(cwd), { force: true });
 }

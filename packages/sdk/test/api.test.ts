@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { apiRequest } from "../src/api.js";
+import { apiRequest, deleteProject, retrieveContext } from "../src/api.js";
 import { NeptuneSdkError } from "../src/errors.js";
 
 describe("SDK API client", () => {
@@ -117,6 +117,67 @@ describe("SDK API client", () => {
         message: "Project access denied.",
         status: 403
       })
+    );
+  });
+
+  it("deletes projects with the DELETE method", async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true })
+    }));
+
+    await deleteProject("22222222-2222-4222-8222-222222222222", {
+      fetch,
+      config: {
+        apiUrl: "http://127.0.0.1:8787",
+        auth: {
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          expiresAt: 1800000000,
+          tokenType: "bearer",
+          user: { id: "user-1" }
+        }
+      }
+    });
+
+    const [url, init] = fetch.mock.calls[0] as unknown as [URL, RequestInit];
+    expect(String(url)).toBe("http://127.0.0.1:8787/projects/22222222-2222-4222-8222-222222222222");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("retrieves context through the smart retrieval endpoint", async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true, contexts: [] })
+    }));
+
+    await retrieveContext(
+      {
+        project_id: "22222222-2222-4222-8222-222222222222",
+        intent: "latest context",
+        mode: "smart",
+        limit: 5
+      },
+      {
+        fetch,
+        config: {
+          apiUrl: "http://127.0.0.1:8787",
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        }
+      }
+    );
+
+    const [url] = fetch.mock.calls[0] as unknown as [URL, RequestInit];
+    expect(String(url)).toBe(
+      "http://127.0.0.1:8787/contexts/retrieve?project_id=22222222-2222-4222-8222-222222222222&intent=latest+context&mode=smart&limit=5"
     );
   });
 

@@ -6,7 +6,8 @@ import {
   createProjectRequestSchema,
   errorCodes,
   markContextReferencedRequestSchema,
-  relevantContextQuerySchema
+  relevantContextQuerySchema,
+  retrieveContextQuerySchema
 } from "../src/index.js";
 
 const projectId = "11111111-1111-4111-8111-111111111111";
@@ -158,6 +159,36 @@ describe("shared schemas", () => {
     expect(parsed.updated_after).toBe("2026-06-23T10:00:00.000Z");
     expect(parsed.unread_only).toBe(false);
     expect(parsed.limit).toBe(5);
+  });
+
+  it("validates smart context retrieval queries", () => {
+    const parsed = retrieveContextQuerySchema.parse({
+      project_id: projectId,
+      intent: "latest uploaded context",
+      target_workstream: "backend",
+      context_type: "implementation_note",
+      limit: "5"
+    });
+
+    expect(parsed).toMatchObject({
+      project_id: projectId,
+      intent: "latest uploaded context",
+      mode: "smart",
+      target_workstream: "backend",
+      context_type: "implementation_note",
+      limit: 5
+    });
+  });
+
+  it("validates strict context retrieval mode", () => {
+    const parsed = retrieveContextQuerySchema.parse({
+      project_id: projectId,
+      mode: "strict",
+      domain: "release"
+    });
+
+    expect(parsed.mode).toBe("strict");
+    expect(parsed.limit).toBe(10);
   });
 
   it("exports stable error codes", () => {

@@ -18,6 +18,7 @@ export const workstreamSchema = z.enum(workstreamValues);
 export const contextTypeSchema = z.enum(contextTypeValues);
 export const contextStatusSchema = z.enum(contextStatusValues);
 export const prioritySchema = z.enum(priorityValues);
+export const retrievalModeSchema = z.enum(["smart", "strict"]);
 
 export const contextPayloadLimits = {
   titleMax: 160,
@@ -112,6 +113,22 @@ export const relevantContextQuerySchema = z.object({
     .default(10)
 });
 
+export const retrieveContextQuerySchema = z.object({
+  project_id: z.string().uuid(),
+  intent: z.string().trim().min(1).max(contextPayloadLimits.retrievalQueryMax).optional(),
+  mode: retrievalModeSchema.default("smart"),
+  target_workstream: workstreamSchema.optional(),
+  domain: z.string().trim().min(1).optional(),
+  code_area: z.string().trim().min(1).optional(),
+  context_type: contextTypeSchema.optional(),
+  limit: z
+    .preprocess((value) => {
+      if (typeof value === "string" && value.trim()) return Number(value);
+      return value;
+    }, z.number().int().min(1).max(50))
+    .default(10)
+});
+
 export const contextIdParamsSchema = z.object({
   context_id: z.string().uuid()
 });
@@ -139,6 +156,7 @@ export type OrgIdParams = z.infer<typeof orgIdParamsSchema>;
 export type ProjectIdParams = z.infer<typeof projectIdParamsSchema>;
 export type CreateContextRequest = z.infer<typeof createContextRequestSchema>;
 export type RelevantContextQuery = z.infer<typeof relevantContextQuerySchema>;
+export type RetrieveContextQuery = z.infer<typeof retrieveContextQuerySchema>;
 export type MarkContextReadRequest = z.infer<typeof markContextReadRequestSchema>;
 export type MarkContextReferencedRequest = z.infer<typeof markContextReferencedRequestSchema>;
 export type ResolveContextRequest = z.infer<typeof resolveContextRequestSchema>;

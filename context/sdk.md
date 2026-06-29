@@ -19,7 +19,7 @@ Status: foundation implemented and published to npm. The SDK now owns config/ses
 packages/sdk
 public package name: neptune-context
 public shared package: neptune-context-shared
-current public version: 0.1.6
+current public version: 0.1.8
 language: TypeScript
 runtime: Node.js >=20
 ```
@@ -44,7 +44,7 @@ read auth token
 construct backend API client
 get current user
 list/create orgs
-list/create projects
+list/create/delete projects
 list org/project members
 infer context metadata from markdown
 validate metadata shape
@@ -157,6 +157,7 @@ inferContextMetadata(input: {
 }): Promise<InferredContextMetadata>
 
 createContext(input: CreateContextInput): Promise<UploadReceipt>
+retrieveContext(input: RetrieveContextInput): Promise<ContextSummary[]>
 listRelevantContext(input: RelevantContextInput): Promise<ContextSummary[]>
 getContext(id: string): Promise<ContextRecord>
 markContextRead(id: string): Promise<void>
@@ -164,9 +165,11 @@ markContextReferenced(input: ReferenceInput): Promise<void>
 resolveContext(id: string): Promise<void>
 ```
 
-`RelevantContextInput` accepts `query`, `updated_after`, and routing filters. `query` is the user's task or the agent's distilled retrieval intent.
+`RetrieveContextInput` accepts raw `intent`, optional routing hints, `mode = smart | strict`, and `limit`. Smart mode is the default for agents: it searches active project context across all workstreams, ranks by intent/hints/recency, and falls back to recent active records instead of returning false-empty results.
 
-`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context. Relevant context summaries may also include `match_reason`.
+`RelevantContextInput` accepts `query`, `updated_after`, and routing filters. It remains the strict workstream-scoped listing contract.
+
+`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context. Retrieval summaries may also include `score`, `match_kind`, and `match_reason`.
 
 ## Metadata Inference Contract
 
