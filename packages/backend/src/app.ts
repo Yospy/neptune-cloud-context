@@ -9,6 +9,7 @@ import {
   orgIdParamsSchema,
   projectIdParamsSchema,
   relevantContextQuerySchema,
+  retrieveContextQuerySchema,
   resolveContextRequestSchema
 } from "neptune-context-shared";
 import { Hono } from "hono";
@@ -196,6 +197,16 @@ export function createApp(deps: AppDeps) {
     return c.json(await deps.repository.createProject(parsed.data, c.var.user));
   });
 
+  app.delete("/projects/:project_id", async (c) => {
+    const parsed = projectIdParamsSchema.safeParse(c.req.param());
+
+    if (!parsed.success) {
+      throw validationError(parsed.error.flatten());
+    }
+
+    return c.json(await deps.repository.deleteProject(parsed.data.project_id, c.var.user));
+  });
+
   app.get("/projects/:project_id/members", async (c) => {
     const parsed = projectIdParamsSchema.safeParse(c.req.param());
 
@@ -225,6 +236,17 @@ export function createApp(deps: AppDeps) {
     }
 
     const contexts = await deps.repository.listRelevantContext(parsed.data, c.var.user);
+    return c.json({ ok: true, contexts });
+  });
+
+  app.get("/contexts/retrieve", relevantContextRateLimit, async (c) => {
+    const parsed = retrieveContextQuerySchema.safeParse(c.req.query());
+
+    if (!parsed.success) {
+      throw validationError(parsed.error.flatten());
+    }
+
+    const contexts = await deps.repository.retrieveContext(parsed.data, c.var.user);
     return c.json({ ok: true, contexts });
   });
 

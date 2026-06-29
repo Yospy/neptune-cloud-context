@@ -8,6 +8,7 @@ import type {
   CreateOrgResponse,
   CreateProjectRequest,
   CreateProjectResponse,
+  DeleteProjectResponse,
   ListOrgMembersResponse,
   ListOrgsResponse,
   ListProjectMembersResponse,
@@ -17,6 +18,7 @@ import type {
   MeResponse,
   Priority,
   RelevantContextQuery,
+  RetrieveContextQuery,
   ResolveContextRequest,
   UploadReceipt,
   UploadReceiptResponse,
@@ -73,6 +75,8 @@ export type ContextRow = {
   version: number;
   confidence_score?: number | null;
   inference_notes?: string | null;
+  score?: number | null;
+  match_kind?: "full_text" | "hint" | "recent" | null;
   match_reason?: string | null;
 };
 
@@ -170,6 +174,10 @@ function raiseOnError(error: DbError | null, fallbackMessage: string): void {
     throw new AppError("CONTEXT_NOT_FOUND", "Context not found.");
   }
 
+  if (codeText.includes("VALIDATION_FAILED")) {
+    throw new AppError("VALIDATION_FAILED", "Request validation failed.");
+  }
+
   if (codeText.includes("23505") || codeText.toLowerCase().includes("duplicate key")) {
     throw new AppError("CONFLICT", "Resource already exists.");
   }
@@ -198,6 +206,14 @@ function contextSummary(row: ContextRow, attribution: ContextAttribution): Conte
 
   if (row.match_reason) {
     summary.match_reason = row.match_reason;
+  }
+
+  if (row.score !== undefined && row.score !== null) {
+    summary.score = Number(row.score);
+  }
+
+  if (row.match_kind) {
+    summary.match_kind = row.match_kind;
   }
 
   return summary;
@@ -417,6 +433,35 @@ export class SupabaseContextRepository implements ContextRepository {
     return projectResponse(data);
   }
 
+  async deleteProject(
+    projectId: string,
+    user: AuthenticatedUser
+  ): Promise<DeleteProjectResponse> {
+    const { data: membership, error: membershipError } = (await table<any>(
+      this.client,
+      "project_members"
+    )
+      .select("org_id, project_id, role")
+      .eq("project_id", projectId)
+      .eq("user_id", user.id)
+      .maybeSingle()) as QueryResult<ProjectMemberRow>;
+
+    raiseOnError(membershipError, "Failed to verify project membership.");
+
+    if (!membership || membership.role !== "admin") {
+      throw new AppError("PROJECT_ACCESS_DENIED", "Project access denied.");
+    }
+
+    const { error } = (await table<any>(this.client, "projects")
+      .delete()
+      .eq("id", projectId)
+      .eq("org_id", membership.org_id)) as QueryResult<null>;
+
+    raiseOnError(error, "Failed to delete project.");
+
+    return { ok: true };
+  }
+
   async listProjectMembers(
     projectId: string,
     user: AuthenticatedUser
@@ -482,6 +527,29 @@ export class SupabaseContextRepository implements ContextRepository {
       p_limit: query.limit
     })) as QueryResult<ContextRow[]>;
     raiseOnError(error, "Failed to list relevant contexts.");
+
+    const limitedRows = data ?? [];
+    const attribution = await this.getContextAttribution(limitedRows);
+
+    return limitedRows.map((row) => contextSummary(row, this.requireAttribution(row, attribution)));
+  }
+
+  async retrieveContext(
+    query: RetrieveContextQuery,
+    user: AuthenticatedUser
+  ): Promise<ContextSummary[]> {
+    const { data, error } = (await this.client.rpc("neptune_retrieve_context", {
+      p_actor_user_id: user.id,
+      p_project_id: query.project_id,
+      p_intent: query.intent ?? null,
+      p_mode: query.mode,
+      p_target_workstream: query.target_workstream ?? null,
+      p_domain: query.domain ?? null,
+      p_code_area: query.code_area ?? null,
+      p_context_type: query.context_type ?? null,
+      p_limit: query.limit
+    })) as QueryResult<ContextRow[]>;
+    raiseOnError(error, "Failed to retrieve contexts.");
 
     const limitedRows = data ?? [];
     const attribution = await this.getContextAttribution(limitedRows);

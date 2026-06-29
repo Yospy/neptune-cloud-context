@@ -15,6 +15,7 @@ import * as z from "zod";
 
 export const NEPTUNE_TOOL_NAMES = [
   "require_project_binding",
+  "retrieve_context",
   "list_relevant_context",
   "get_context",
   "create_context",
@@ -143,6 +144,24 @@ export const toolDefinitions: ToolDefinition[] = [
       ok: true,
       binding: await context.requireProjectBinding((args.cwd as string | undefined) ?? context.cwd)
     })
+  },
+  {
+    name: "retrieve_context",
+    title: "Retrieve Context",
+    description:
+      "Smart project-wide context retrieval for natural user intent. Use this before implementation and for vague requests like latest context, uploaded today, rough keywords, or typo-prone document references.",
+    inputSchema: z.object({
+      project_id: uuidSchema,
+      intent: z.string().trim().min(1).max(contextPayloadLimits.retrievalQueryMax).optional(),
+      mode: z.enum(["smart", "strict"]).default("smart"),
+      target_workstream: workstreamSchema.optional(),
+      domain: z.string().trim().min(1).optional(),
+      code_area: z.string().trim().min(1).optional(),
+      context_type: contextTypeSchema.optional(),
+      limit: z.number().int().min(1).max(50).default(10)
+    }),
+    annotations: { readOnlyHint: true },
+    handler: (args, context) => context.client.retrieveContext(args as Parameters<NeptuneClient["retrieveContext"]>[0])
   },
   {
     name: "list_relevant_context",

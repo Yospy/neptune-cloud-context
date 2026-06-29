@@ -11,7 +11,15 @@ const retrievalStopWords = new Set([
   "related",
   "find",
   "get",
-  "show"
+  "show",
+  "that",
+  "this",
+  "doc",
+  "document",
+  "uploaded",
+  "upload",
+  "today",
+  "yesterday"
 ]);
 
 let idCounter = 1;
@@ -160,12 +168,99 @@ function relevantContextRows(tables: FakeTables, args: Record<string, unknown>) 
   return { data: rows, error: null };
 }
 
+function hintScore(row: Row, args: Record<string, unknown>) {
+  let score = 0;
+  if (args.p_target_workstream && row.target_workstreams?.includes(args.p_target_workstream)) score += 4;
+  if (args.p_domain && row.domain === args.p_domain) score += 3;
+  if (args.p_context_type && row.context_type === args.p_context_type) score += 2;
+  if (args.p_code_area && row.code_areas?.includes(args.p_code_area)) score += 2;
+  return score;
+}
+
+function retrieveContextRows(tables: FakeTables, args: Record<string, unknown>) {
+  const projectId = args.p_project_id;
+  const actorUserId = args.p_actor_user_id;
+  const project = (tables.projects ?? []).find((row) => row.id === projectId);
+
+  if (!project) {
+    return { data: null, error: { message: "PROJECT_NOT_FOUND" } };
+  }
+
+  const isMember = (tables.project_members ?? []).some(
+    (row) => row.project_id === projectId && row.user_id === actorUserId
+  );
+
+  if (!isMember) {
+    return { data: null, error: { message: "PROJECT_ACCESS_DENIED" } };
+  }
+
+  const mode = args.p_mode ?? "smart";
+  if (mode !== "smart" && mode !== "strict") {
+    return { data: null, error: { message: "VALIDATION_FAILED" } };
+  }
+
+  const query = args.p_intent;
+  const terms = queryTerms(query);
+  const hasQuery = terms.length > 0;
+  const strict = mode === "strict";
+  const limit = Math.max(1, Math.min(Number(args.p_limit ?? 10), 50));
+
+  const rows = (tables.contexts ?? [])
+    .filter((row) => row.project_id === projectId)
+    .filter((row) => row.status === "active")
+    .filter((row) => !strict || !args.p_target_workstream || row.target_workstreams?.includes(args.p_target_workstream))
+    .filter((row) => !strict || !args.p_domain || row.domain === args.p_domain)
+    .filter((row) => !strict || !args.p_context_type || row.context_type === args.p_context_type)
+    .filter((row) => !strict || !args.p_code_area || row.code_areas?.includes(args.p_code_area))
+    .map((row) => ({
+      ...row,
+      __queryScore: hasQuery ? queryScore(row, query) : 0,
+      __hintScore: hintScore(row, args)
+    }))
+    .filter((row) => !strict || !hasQuery || terms.every((term) => searchableText(row).includes(term)))
+    .sort((a, b) => {
+      const matchDelta = Number(b.__queryScore > 0) - Number(a.__queryScore > 0);
+      if (matchDelta !== 0) return matchDelta;
+      if (b.__queryScore !== a.__queryScore) return b.__queryScore - a.__queryScore;
+      if (b.__hintScore !== a.__hintScore) return b.__hintScore - a.__hintScore;
+      if (a.__queryScore === 0 && b.__queryScore === 0) {
+        const recencyDelta = String(b.updated_at).localeCompare(String(a.updated_at));
+        if (recencyDelta !== 0) return recencyDelta;
+      }
+      const priorityDelta = priorityScore(b.priority) - priorityScore(a.priority);
+      if (priorityDelta !== 0) return priorityDelta;
+      const confidenceDelta = Number(b.confidence_score ?? 0) - Number(a.confidence_score ?? 0);
+      if (confidenceDelta !== 0) return confidenceDelta;
+      return String(b.updated_at).localeCompare(String(a.updated_at));
+    })
+    .slice(0, limit)
+    .map(({ __queryScore, __hintScore, ...row }) => ({
+      ...row,
+      score: __queryScore + __hintScore + priorityScore(row.priority) + Number(row.confidence_score ?? 0),
+      match_kind: __queryScore > 0 ? "full_text" : __hintScore > 0 ? "hint" : "recent",
+      match_reason:
+        mode === "strict" && __queryScore > 0
+          ? "Strict filters matched; ranked by intent full-text search."
+          : mode === "strict"
+            ? "Strict filters matched; ordered by latest update."
+            : __queryScore > 0
+              ? "Matched intent by project-wide full-text search."
+              : __hintScore > 0
+                ? "No strong intent match; boosted by routing hints."
+                : query
+                  ? "No strong intent match; showing recent active project context."
+                  : "No intent supplied; showing recent active project context."
+    }));
+
+  return { data: rows, error: null };
+}
+
 class FakeQuery {
   private filters: Array<[string, unknown]> = [];
   private containsFilters: Array<[string, unknown[]]> = [];
   private inFilters: Array<[string, unknown[]]> = [];
   private selected = false;
-  private action: "select" | "insert" | "update" | "upsert" = "select";
+  private action: "select" | "delete" | "insert" | "update" | "upsert" = "select";
   private values: Row | Row[] | null = null;
   private orderBy: { key: string; ascending: boolean } | null = null;
   private rowLimit: number | null = null;
@@ -214,6 +309,11 @@ class FakeQuery {
   update(values: Row) {
     this.action = "update";
     this.values = values;
+    return this;
+  }
+
+  delete() {
+    this.action = "delete";
     return this;
   }
 
@@ -288,6 +388,12 @@ class FakeQuery {
       return { data: this.selected ? [existing ?? values] : null, error: null };
     }
 
+    if (this.action === "delete") {
+      const deleted = this.filteredRows(rows);
+      this.tables[this.tableName] = rows.filter((row) => !deleted.includes(row));
+      return { data: this.selected ? deleted : null, error: null };
+    }
+
     return { data: this.filteredRows(rows), error: null };
   }
 
@@ -321,6 +427,9 @@ export function createFakeSupabase(tables: FakeTables) {
     async rpc(fn: string, args: Record<string, unknown> = {}) {
       if (fn === "neptune_list_relevant_context") {
         return relevantContextRows(tables, args);
+      }
+      if (fn === "neptune_retrieve_context") {
+        return retrieveContextRows(tables, args);
       }
       throw new Error("RPC is not implemented by createFakeSupabase.");
     }

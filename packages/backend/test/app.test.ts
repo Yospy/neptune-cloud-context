@@ -76,6 +76,7 @@ function repository() {
         created_at: "2026-05-16T12:00:00.000Z"
       }
     })),
+    deleteProject: vi.fn(async () => ({ ok: true })),
     listProjectMembers: vi.fn(async () => ({
       ok: true,
       members: []
@@ -102,6 +103,7 @@ function repository() {
       }
     })),
     listRelevantContext: vi.fn(async () => []),
+    retrieveContext: vi.fn(async () => []),
     getContext: vi.fn(async () => {
       throw new AppError("CONTEXT_NOT_FOUND", "Context not found.");
     }),
@@ -472,6 +474,22 @@ describe("createApp", () => {
     });
   });
 
+  it("deletes projects with an authenticated user", async () => {
+    const repo = repository();
+    const app = createApp({ authClient: authClient(), repository: repo });
+    const response = await app.request(`/projects/${projectId}`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer token" }
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(repo.deleteProject).toHaveBeenCalledWith(
+      projectId,
+      expect.objectContaining({ id: userId })
+    );
+  });
+
   it("lists project members with an authenticated user", async () => {
     const repo = repository();
     const app = createApp({ authClient: authClient(), repository: repo });
@@ -512,6 +530,28 @@ describe("createApp", () => {
       error: { code: "RATE_LIMITED" }
     });
     expect(repo.listRelevantContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("retrieves context with smart project-wide query parsing", async () => {
+    const repo = repository();
+    const app = createApp({ authClient: authClient(), repository: repo });
+    const response = await app.request(
+      `/contexts/retrieve?project_id=${projectId}&intent=latest+uploaded+context&limit=5`,
+      {
+        headers: { Authorization: "Bearer token" }
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(repo.retrieveContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_id: projectId,
+        intent: "latest uploaded context",
+        mode: "smart",
+        limit: 5
+      }),
+      expect.objectContaining({ id: userId })
+    );
   });
 
   it("rate limits direct context reads", async () => {

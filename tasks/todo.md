@@ -2,11 +2,11 @@
 
 ## Active Sprint
 
-`sprints/2026-06-23-agent-intent-retrieval.md`
+`sprints/2026-06-29-smart-context-retrieval.md`
 
 ## Previous Sprint
 
-`sprints/2026-05-21-cli-name-create-commands.md`
+`sprints/2026-06-29-project-delete-and-logout.md`
 
 ## Tasks
 
@@ -19,6 +19,36 @@
 - [x] Run focused and workspace verification.
 - [x] Run independent subagent verification.
 - [x] Review diff, side effects, and publish commands.
+
+- [x] Create smart context retrieval sprint plan.
+- [x] Add shared smart retrieval schemas and types.
+- [x] Add project-wide smart retrieval database RPC.
+- [x] Wire backend retrieve route and repository method.
+- [x] Add SDK retrieveContext wrapper.
+- [x] Add MCP retrieve_context tool.
+- [x] Update context docs.
+- [x] Add focused tests.
+- [x] Run verification and independent subagent review.
+- [x] Review diff, side effects, and publish/deploy commands.
+
+- [x] Create CLI org/project binding sprint plan.
+- [x] Add SDK default org and project unbind helpers.
+- [x] Add CLI org/project binding commands.
+- [x] Update CLI setup docs.
+- [x] Add focused SDK/CLI tests.
+- [x] Run typecheck, tests, and build.
+- [x] Run independent subagent review.
+- [x] Review diff, side effects, and publish commands.
+
+- [x] Create project delete/logout sprint plan.
+- [x] Add shared delete response type.
+- [x] Add backend delete route and repository authorization.
+- [x] Add SDK deleteProject wrapper.
+- [x] Add CLI project delete command and auth logout alias.
+- [x] Update docs and package versions.
+- [x] Add focused tests.
+- [x] Run verification.
+- [x] Review diff, side effects, and publish/deploy commands.
 
 - [x] Create Neptune security hardening sprint plan.
 - [x] Add cross-org/project authorization fixtures.

@@ -11,7 +11,7 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 ```text
 packages/cli
 package name: neptune-context-cli
-version: 0.1.9
+version: 0.1.11
 binary: neptune
 language: TypeScript
 distribution: npm
@@ -22,14 +22,23 @@ distribution: npm
 ```bash
 neptune login
 neptune auth status
+neptune auth logout
 neptune me
 neptune orgs
+neptune org list
 neptune create org <name>
 neptune org create <name>
+neptune org use <slug-or-id>
+neptune org current
 neptune org members
 neptune projects
+neptune project list
 neptune create project <name> <org-name-or-slug>
 neptune project create <name> <org-name-or-slug>
+neptune project bind <project|org/project>
+neptune project delete <project|org/project>
+neptune project current
+neptune project unbind
 neptune project members
 neptune mcp install
 neptune setup
@@ -46,9 +55,17 @@ logout
 me
 orgs
 org create
+org list
+org use
+org current
 org members
 projects
 project create
+project list
+project bind
+project delete
+project current
+project unbind
 project members
 mcp install
 setup
@@ -62,6 +79,68 @@ invite commands
 ```
 
 Repo binding helpers exist in the SDK. `neptune setup` writes `.neptune/config.json` for the current repo.
+
+## Org and Project Binding
+
+Default org is account/session state stored in:
+
+```text
+~/.neptune/config.json
+```
+
+Current directory project binding is repo state stored in:
+
+```text
+.neptune/config.json
+```
+
+Standard flow:
+
+```bash
+neptune org create acme
+neptune org use acme
+neptune project create api --workstream backend
+neptune project bind api
+neptune current
+```
+
+Explicit flow without relying on the default org:
+
+```bash
+neptune org create acme
+neptune project create api --org acme --workstream backend
+neptune project bind acme/api
+neptune current
+```
+
+Inspection and listing:
+
+```bash
+neptune org current
+neptune org members
+neptune project list
+neptune project current
+```
+
+Changing the directory binding is just another bind:
+
+```bash
+neptune project bind another-project
+neptune project bind acme/another-project
+```
+
+Delete a project:
+
+```bash
+neptune project delete acme/another-project
+neptune project delete acme/another-project --yes
+```
+
+Clear the current directory binding:
+
+```bash
+neptune project unbind
+```
 
 ## Login Flow
 

@@ -156,10 +156,10 @@ User says: I am working on backend auth. Check relevant context.
 Agent determines current project from .neptune/config.json
   |
   v
-MCP calls list_relevant_context with a query such as "backend auth latest context"
+MCP calls retrieve_context with raw intent such as "backend auth latest context"
   |
   v
-Backend filters by project/status/workstream, applies optional filters, ranks query matches, and returns match reasons
+Backend filters by project/status, treats routing metadata as optional hints, ranks candidates, and returns match reasons
   |
   v
 Agent reads matching context
@@ -182,7 +182,7 @@ sample.py connects to neptune-context-mcp over stdio
 OpenAI model receives MCP tools as function tools
   |
   v
-Model chooses tools such as require_project_binding/list_relevant_context/get_context/create_context
+Model chooses tools such as require_project_binding/retrieve_context/list_relevant_context/get_context/create_context
   |
   v
 MCP calls SDK, SDK calls backend with user's bearer token

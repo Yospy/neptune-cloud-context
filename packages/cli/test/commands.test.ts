@@ -95,6 +95,40 @@ describe("CLI commands", () => {
     }
   });
 
+  it("supports auth logout as an alias and clears default org", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "secret-access-token",
+            refreshToken: "secret-refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1", email: "user@example.com" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["auth", "logout"], { configPath, stdout });
+
+      expect(code).toBe(0);
+      expect(stdout.value()).toContain("Logged out.");
+      expect(await readConfig(configPath)).toEqual({ apiUrl: "http://127.0.0.1:8787" });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("creates projects by resolving org slug to org id", async () => {
     const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
     const configPath = join(dir, "config.json");
@@ -152,11 +186,513 @@ describe("CLI commands", () => {
       });
 
       expect(code).toBe(0);
-      expect(stdout.value()).toContain("Created project checkout");
+      expect(stdout.value()).toContain("Created project acme/checkout");
       expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({
         org_id: "11111111-1111-4111-8111-111111111111",
         slug: "checkout"
       });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("sets and prints the default org", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          ok: true,
+          orgs: [
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              slug: "acme",
+              name: "Acme",
+              role: "owner",
+              created_at: "2026-06-29T00:00:00.000Z"
+            }
+          ]
+        })
+    });
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const useCode = await runCli(["org", "use", "acme"], { configPath, stdout, fetch });
+      expect(useCode).toBe(0);
+      expect(await readConfig(configPath)).toMatchObject({
+        defaultOrg: {
+          org_id: "11111111-1111-4111-8111-111111111111",
+          org_slug: "acme"
+        }
+      });
+
+      const currentCode = await runCli(["org", "current"], { configPath, stdout });
+      expect(currentCode).toBe(0);
+      expect(stdout.value()).toContain("acme\t11111111-1111-4111-8111-111111111111");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("creates projects inside the default org", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            project: {
+              id: "22222222-2222-4222-8222-222222222222",
+              org_id: "11111111-1111-4111-8111-111111111111",
+              slug: "api",
+              name: "Api",
+              role: "admin",
+              default_workstream: "backend",
+              created_at: "2026-06-29T00:00:00.000Z"
+            }
+          })
+      });
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "create", "api", "--workstream", "backend"], {
+        configPath,
+        stdout,
+        fetch
+      });
+
+      expect(code).toBe(0);
+      expect(stdout.value()).toContain("Created project acme/api");
+      expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({
+        org_id: "11111111-1111-4111-8111-111111111111",
+        slug: "api",
+        default_workstream: "backend"
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("binds, prints, and unbinds the current directory project", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const cwd = join(dir, "repo");
+    const stdout = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                id: "22222222-2222-4222-8222-222222222222",
+                org_id: "11111111-1111-4111-8111-111111111111",
+                slug: "api",
+                name: "Api",
+                role: "admin",
+                default_workstream: "backend",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      });
+
+    try {
+      await mkdir(cwd, { recursive: true });
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const bindCode = await runCli(["project", "bind", "api"], { configPath, cwd, stdout, fetch });
+      expect(bindCode).toBe(0);
+      expect(JSON.parse(await readFile(join(cwd, ".neptune", "config.json"), "utf8"))).toMatchObject({
+        org_slug: "acme",
+        project_slug: "api",
+        project_id: "22222222-2222-4222-8222-222222222222",
+        default_workstream: "backend"
+      });
+
+      const currentCode = await runCli(["project", "current"], { configPath, cwd, stdout });
+      expect(currentCode).toBe(0);
+      expect(stdout.value()).toContain("acme/api\tbackend\t22222222-2222-4222-8222-222222222222");
+
+      const unbindCode = await runCli(["project", "unbind"], { configPath, cwd, stdout });
+      expect(unbindCode).toBe(0);
+      await expect(readFile(join(cwd, ".neptune", "config.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("deletes projects after confirmation and removes matching repo binding", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const cwd = join(dir, "repo");
+    const stdout = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                id: "22222222-2222-4222-8222-222222222222",
+                org_id: "11111111-1111-4111-8111-111111111111",
+                slug: "api",
+                name: "Api",
+                role: "admin",
+                default_workstream: "backend",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true })
+      });
+
+    try {
+      await mkdir(join(cwd, ".neptune"), { recursive: true });
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+      await writeFile(
+        join(cwd, ".neptune", "config.json"),
+        JSON.stringify({
+          org_slug: "acme",
+          project_slug: "api",
+          project_id: "22222222-2222-4222-8222-222222222222",
+          default_workstream: "backend"
+        })
+      );
+
+      const code = await runCli(["project", "delete", "api"], {
+        configPath,
+        cwd,
+        stdout,
+        fetch,
+        prompt: vi.fn(async () => "api")
+      });
+
+      expect(code).toBe(0);
+      expect(stdout.value()).toContain("Deleted project acme/api");
+      expect(String(fetch.mock.calls[2][0])).toContain("/projects/22222222-2222-4222-8222-222222222222");
+      expect(fetch.mock.calls[2][1]?.method).toBe("DELETE");
+      await expect(readFile(join(cwd, ".neptune", "config.json"), "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("cancels project deletion when confirmation does not match", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const stderr = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                id: "22222222-2222-4222-8222-222222222222",
+                org_id: "11111111-1111-4111-8111-111111111111",
+                slug: "api",
+                name: "Api",
+                role: "admin",
+                default_workstream: "backend",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      });
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "delete", "api"], {
+        configPath,
+        stdout,
+        stderr,
+        fetch,
+        prompt: vi.fn(async () => "no")
+      });
+
+      expect(code).toBe(1);
+      expect(stderr.value()).toContain("Project deletion cancelled.");
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the default org for org members and project list", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const projectListResponse = {
+      ok: true,
+      projects: [
+        {
+          id: "22222222-2222-4222-8222-222222222222",
+          org_id: "11111111-1111-4111-8111-111111111111",
+          slug: "api",
+          name: "Api",
+          role: "admin",
+          default_workstream: "backend",
+          created_at: "2026-06-29T00:00:00.000Z"
+        }
+      ]
+    };
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            members: [
+              {
+                user: {
+                  id: "user-1",
+                  email: "user@example.com",
+                  display_name: null,
+                  avatar_url: null,
+                  provider: "github",
+                  last_seen_at: null,
+                  created_at: "2026-06-29T00:00:00.000Z",
+                  updated_at: "2026-06-29T00:00:00.000Z"
+                },
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(projectListResponse)
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(projectListResponse)
+      });
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const membersCode = await runCli(["org", "members"], { configPath, stdout, fetch });
+      expect(membersCode).toBe(0);
+      expect(stdout.value()).toContain("user@example.com\towner\tuser-1");
+
+      const listCode = await runCli(["project", "list"], { configPath, stdout, fetch });
+      expect(listCode).toBe(0);
+      expect(stdout.value()).toContain("api\tadmin\t22222222-2222-4222-8222-222222222222\tbackend");
+      expect(String(fetch.mock.calls[2][0])).toContain("org_id=11111111-1111-4111-8111-111111111111");
+
+      const legacyStdout = stream();
+      const legacyCode = await runCli(["projects"], { configPath, stdout: legacyStdout, fetch });
+      expect(legacyCode).toBe(0);
+      expect(legacyStdout.value()).toBe("api\tadmin\t22222222-2222-4222-8222-222222222222\n");
+      expect(String(fetch.mock.calls[3][0])).not.toContain("org_id=");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -325,7 +861,7 @@ describe("CLI commands", () => {
       });
 
       expect(code).toBe(0);
-      expect(stdout.value()).toContain("Created project checkout-ui");
+      expect(stdout.value()).toContain("Created project acme/checkout-ui");
       expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({
         slug: "checkout-ui",
         name: "Checkout UI",
@@ -401,7 +937,7 @@ describe("CLI commands", () => {
       });
 
       expect(code).toBe(0);
-      expect(stdout.value()).toContain("Created project tisac");
+      expect(stdout.value()).toContain("Created project my-org/tisac");
       expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({
         org_id: "11111111-1111-4111-8111-111111111111",
         slug: "tisac",
@@ -477,7 +1013,7 @@ describe("CLI commands", () => {
       });
 
       expect(code).toBe(0);
-      expect(stdout.value()).toContain("Created project tisac");
+      expect(stdout.value()).toContain("Created project neptune/tisac");
       expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toMatchObject({
         org_id: "11111111-1111-4111-8111-111111111111",
         slug: "tisac",
