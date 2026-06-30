@@ -130,6 +130,7 @@ function printHelp(stdout: Pick<NodeJS.WriteStream, "write">) {
   writeLine(stdout, "  neptune create project <name> [<org-name-or-slug>] [--org <slug-or-id>] [--name <name>]");
   writeLine(stdout, "  neptune project create <name> [<org-name-or-slug>] [--org <slug-or-id>] [--name <name>]");
   writeLine(stdout, "  neptune project bind <project|org/project> [--org <slug-or-id>] [--workstream <workstream>]");
+  writeLine(stdout, "  neptune project checkout <project> [--workstream <workstream>]");
   writeLine(stdout, "  neptune project delete <project|org/project> [--org <slug-or-id>] [--yes]");
   writeLine(stdout, "  neptune project current");
   writeLine(stdout, "  neptune project unbind");
@@ -208,6 +209,27 @@ async function findProjectInOrg(projectInput: string, orgInput: string, deps: Cl
 
   if (!project) {
     throw new Error(`Project not found: ${org.slug}/${projectInput}. Run \`neptune project create ${projectInput} --org ${org.slug}\`.`);
+  }
+
+  return { org, project };
+}
+
+async function findProjectForCheckout(projectInput: string, deps: CliDeps) {
+  if (projectInput.includes("/")) {
+    throw new Error("Usage: neptune project checkout <project>");
+  }
+
+  const defaultOrg = await loadDefaultOrg(deps);
+  if (!defaultOrg) {
+    throw new Error("No org selected. Run `neptune org use <org-slug>`.");
+  }
+
+  const org = await resolveOrg(defaultOrg.org_slug, deps);
+  const projects = (await listProjects(org.id, deps)).projects;
+  const project = projects.find((candidate) => projectMatches(candidate, projectInput));
+
+  if (!project) {
+    throw new Error(`Project not found in current org: ${org.slug}/${projectInput}.`);
   }
 
   return { org, project };
@@ -456,6 +478,32 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number
         deps.cwd
       );
       writeLine(stdout, `Bound repo to ${binding.org_slug}/${binding.project_slug} (${binding.project_id}).`);
+      return 0;
+    }
+
+    if (command === "project" && subcommand === "checkout") {
+      const target = positionalValues(rest)[0];
+      if (!target || rest.includes("--org")) throw new Error("Usage: neptune project checkout <project>");
+
+      const workstreamOverride = flagValue(rest, "--workstream");
+      let parsedWorkstreamOverride: Workstream | undefined;
+      if (workstreamOverride) {
+        if (!isWorkstream(workstreamOverride)) throw new Error(`Invalid workstream: ${workstreamOverride}`);
+        parsedWorkstreamOverride = workstreamOverride;
+      }
+
+      const { org, project } = await findProjectForCheckout(target, deps);
+      const defaultWorkstream = parsedWorkstreamOverride ?? project.default_workstream;
+      const binding = await writeProjectBinding(
+        {
+          org_slug: org.slug,
+          project_slug: project.slug,
+          project_id: project.id,
+          default_workstream: defaultWorkstream
+        },
+        deps.cwd
+      );
+      writeLine(stdout, `Checked out project ${binding.org_slug}/${binding.project_slug} (${binding.project_id}).`);
       return 0;
     }
 

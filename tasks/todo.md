@@ -2,13 +2,20 @@
 
 ## Active Sprint
 
-`sprints/2026-06-29-smart-context-retrieval.md`
+`sprints/2026-06-29-project-checkout-binding.md`
 
 ## Previous Sprint
 
-`sprints/2026-06-29-project-delete-and-logout.md`
+`sprints/2026-06-29-smart-context-retrieval.md`
 
 ## Tasks
+
+- [x] Create project checkout binding sprint plan.
+- [x] Add CLI project checkout command.
+- [x] Add focused checkout tests.
+- [x] Update CLI docs/help.
+- [x] Run verification and independent subagent review.
+- [x] Review diff, side effects, and publish commands.
 
 - [x] Create agent intent retrieval sprint plan.
 - [x] Extend shared retrieval contracts.

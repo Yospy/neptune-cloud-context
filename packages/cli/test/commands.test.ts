@@ -413,6 +413,343 @@ describe("CLI commands", () => {
     }
   });
 
+  it("checks out a project from the selected org into the current directory", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const cwd = join(dir, "repo");
+    const stdout = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                id: "22222222-2222-4222-8222-222222222222",
+                org_id: "11111111-1111-4111-8111-111111111111",
+                slug: "api",
+                name: "Api",
+                role: "admin",
+                default_workstream: "backend",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      });
+
+    try {
+      await mkdir(cwd, { recursive: true });
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "checkout", "api"], { configPath, cwd, stdout, fetch });
+
+      expect(code).toBe(0);
+      expect(stdout.value()).toContain("Checked out project acme/api");
+      expect(JSON.parse(await readFile(join(cwd, ".neptune", "config.json"), "utf8"))).toMatchObject({
+        org_slug: "acme",
+        project_slug: "api",
+        project_id: "22222222-2222-4222-8222-222222222222",
+        default_workstream: "backend"
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("project checkout replaces an existing directory binding", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const cwd = join(dir, "repo");
+    const stdout = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            projects: [
+              {
+                id: "33333333-3333-4333-8333-333333333333",
+                org_id: "11111111-1111-4111-8111-111111111111",
+                slug: "website",
+                name: "Website",
+                role: "admin",
+                default_workstream: "frontend",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      });
+
+    try {
+      await mkdir(join(cwd, ".neptune"), { recursive: true });
+      await writeFile(
+        join(cwd, ".neptune", "config.json"),
+        JSON.stringify({
+          org_slug: "acme",
+          project_slug: "old-project",
+          project_id: "22222222-2222-4222-8222-222222222222",
+          default_workstream: "backend"
+        })
+      );
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "checkout", "website", "--workstream", "docs"], {
+        configPath,
+        cwd,
+        stdout,
+        fetch
+      });
+
+      expect(code).toBe(0);
+      expect(JSON.parse(await readFile(join(cwd, ".neptune", "config.json"), "utf8"))).toMatchObject({
+        org_slug: "acme",
+        project_slug: "website",
+        project_id: "33333333-3333-4333-8333-333333333333",
+        default_workstream: "docs"
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("project checkout fails without a selected org", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const stderr = stream();
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "checkout", "api"], { configPath, stdout, stderr });
+
+      expect(code).toBe(1);
+      expect(stderr.value()).toContain("No org selected. Run `neptune org use <org-slug>`.");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("project checkout fails when the project is missing in the selected org", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const stderr = stream();
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            orgs: [
+              {
+                id: "11111111-1111-4111-8111-111111111111",
+                slug: "acme",
+                name: "Acme",
+                role: "owner",
+                created_at: "2026-06-29T00:00:00.000Z"
+              }
+            ]
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true, projects: [] })
+      });
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "checkout", "api"], { configPath, stdout, stderr, fetch });
+
+      expect(code).toBe(1);
+      expect(stderr.value()).toContain("Project not found in current org: acme/api.");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("project checkout rejects org-qualified project names", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const stderr = stream();
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const code = await runCli(["project", "checkout", "acme/api"], { configPath, stdout, stderr });
+
+      expect(code).toBe(1);
+      expect(stderr.value()).toContain("Usage: neptune project checkout <project>");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("project checkout rejects the org flag", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "config.json");
+    const stdout = stream();
+    const stderr = stream();
+
+    try {
+      await writeConfig(
+        {
+          apiUrl: "http://127.0.0.1:8787",
+          defaultOrg: {
+            org_id: "11111111-1111-4111-8111-111111111111",
+            org_slug: "acme"
+          },
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        },
+        configPath
+      );
+
+      const withValue = await runCli(["project", "checkout", "api", "--org", "acme"], {
+        configPath,
+        stdout,
+        stderr
+      });
+      const bare = await runCli(["project", "checkout", "api", "--org"], {
+        configPath,
+        stdout,
+        stderr
+      });
+
+      expect(withValue).toBe(1);
+      expect(bare).toBe(1);
+      expect(stderr.value()).toContain("Usage: neptune project checkout <project>");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("deletes projects after confirmation and removes matching repo binding", async () => {
     const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
     const configPath = join(dir, "config.json");
