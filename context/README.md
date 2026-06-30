@@ -34,13 +34,14 @@ implemented:
   org creation and org membership
   project creation and project membership
   context create, relevant search, get, read, reference, resolve
+  author-owned context notes with manual/agent-inferred source
   Neptune DB RPC rename using neptune_* functions
   SDK package foundation for config/session/API/binding/metadata/receipts
   deterministic SDK metadata inference
-  public npm package neptune-context-shared@0.1.5
-  public npm package neptune-context@0.1.8
-  public npm package neptune-context-mcp@0.1.6 with 5 context-work tools
-  public npm package neptune-context-cli@0.1.11 with neptune binary
+  public npm package neptune-context-shared@0.1.7
+  public npm package neptune-context@0.1.10
+  public npm package neptune-context-mcp@0.1.8 with 6 context-work tools
+  public npm package neptune-context-cli@0.1.13 with neptune binary
   neptune mcp install for Codex and Claude Code
   neptune setup for login/org/project/repo binding/MCP install
   neptune doctor for local install diagnostics
@@ -63,16 +64,17 @@ neptune mcp install -> Codex/Claude MCP config -> neptune-context-mcp -> backend
 Latest regression status:
 
 ```text
-corepack pnpm --filter @neptune/backend test       passed
-corepack pnpm --filter neptune-context test        passed, 29 tests
-corepack pnpm --filter neptune-context-mcp test    passed
-corepack pnpm --filter neptune-context-cli test    passed, 42 tests
+corepack pnpm --filter neptune-context-shared test passed, 29 tests
+corepack pnpm --filter @neptune/backend test       passed, 71 tests plus 1 skipped integration
+corepack pnpm --filter neptune-context test        passed, 32 tests
+corepack pnpm --filter neptune-context-mcp test    passed, 27 tests
+corepack pnpm --filter neptune-context-cli test    passed, 48 tests
 corepack pnpm typecheck                            passed
 corepack pnpm test                                 passed
 corepack pnpm build                                passed
-pnpm pack + clean install smoke                    passed
-local MCP stdio tools/list                         passed with Node 23
-live backend 8787 duplicate org/project            409 CONFLICT
+pnpm pack + clean install smoke                    not yet rerun for author-note release
+local MCP stdio tools/list                         not yet rerun for author-note release
+live author-note migration                         applied and readback verified
 live CLI me/orgs against backend 8787              passed
 local MCP stdio tools/list                         passed with exact 5 tools after reduction
 ```

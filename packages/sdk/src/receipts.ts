@@ -12,6 +12,13 @@ export function formatUploadReceipt(input: UploadReceipt | UploadReceiptResponse
   const receipt = unwrapReceipt(input);
   const changed = "changed" in input ? input.changed : true;
   const heading = changed ? "Context uploaded" : "No change detected.";
+  const authorNoteLines = receipt.author_note_md
+    ? [
+        `Author note source: ${receipt.author_note_source}`,
+        `Author note updated at: ${receipt.author_note_updated_at}`,
+        `Author note: ${receipt.author_note_md}`
+      ]
+    : [];
 
   return [
     heading,
@@ -30,6 +37,7 @@ export function formatUploadReceipt(input: UploadReceipt | UploadReceiptResponse
     `Created at: ${receipt.created_at}`,
     `Published by: ${userLabel(receipt.created_by_user)}`,
     `Updated by: ${userLabel(receipt.updated_by_user)}`,
+    ...authorNoteLines,
     `Hash: ${receipt.content_hash}`
   ].join("\n");
 }

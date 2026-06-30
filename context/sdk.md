@@ -19,7 +19,7 @@ Status: foundation implemented and published to npm. The SDK now owns config/ses
 packages/sdk
 public package name: neptune-context
 public shared package: neptune-context-shared
-current public version: 0.1.8
+current public version: 0.1.10
 language: TypeScript
 runtime: Node.js >=20
 ```
@@ -160,6 +160,7 @@ createContext(input: CreateContextInput): Promise<UploadReceipt>
 retrieveContext(input: RetrieveContextInput): Promise<ContextSummary[]>
 listRelevantContext(input: RelevantContextInput): Promise<ContextSummary[]>
 getContext(id: string): Promise<ContextRecord>
+updateContextAuthorNote(id: string, input: AuthorNoteInput): Promise<void>
 markContextRead(id: string): Promise<void>
 markContextReferenced(input: ReferenceInput): Promise<void>
 resolveContext(id: string): Promise<void>
@@ -169,7 +170,7 @@ resolveContext(id: string): Promise<void>
 
 `RelevantContextInput` accepts `query`, `updated_after`, and routing filters. It remains the strict workstream-scoped listing contract.
 
-`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user` and `updated_by_user` profile objects so agents can attribute published and changed context. Retrieval summaries may also include `score`, `match_kind`, and `match_reason`.
+`UploadReceipt`, `ContextSummary`, and `ContextRecord` include `created_by_user`, `updated_by_user`, and nullable `author_note_*` fields so agents can attribute published context, changed context, and author-owned intent. Retrieval summaries may also include `score`, `match_kind`, and `match_reason`.
 
 ## Metadata Inference Contract
 
@@ -195,6 +196,15 @@ type InferredContextMetadata = {
 
 If confidence is low, MCP should ask the user before upload.
 
+Author note update input:
+
+```ts
+type AuthorNoteInput = {
+  author_note_md: string;
+  author_note_source: "manual" | "agent_inferred";
+};
+```
+
 ## Error Handling
 
 SDK errors should be deterministic and agent-readable.
@@ -205,6 +215,7 @@ CONFLICT
 PROJECT_NOT_BOUND
 ORG_ACCESS_DENIED
 PROJECT_ACCESS_DENIED
+AUTHOR_NOTE_ACCESS_DENIED
 VALIDATION_FAILED
 CONTEXT_NOT_FOUND
 NETWORK_ERROR

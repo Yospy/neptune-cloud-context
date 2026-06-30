@@ -6,6 +6,7 @@ import {
   requireProjectBinding as sdkRequireProjectBinding
 } from "neptune-context";
 import {
+  authorNoteSourceValues,
   contextPayloadLimits,
   contextTypeValues,
   priorityValues,
@@ -19,6 +20,7 @@ export const NEPTUNE_TOOL_NAMES = [
   "list_relevant_context",
   "get_context",
   "create_context",
+  "update_context_author_note",
   "mark_context_referenced"
 ] as const;
 
@@ -44,6 +46,7 @@ type ToolDefinition = {
 const workstreamSchema = z.enum(workstreamValues);
 const contextTypeSchema = z.enum(contextTypeValues);
 const prioritySchema = z.enum(priorityValues);
+const authorNoteSourceSchema = z.enum(authorNoteSourceValues);
 const uuidSchema = z.string().uuid();
 const cwdSchema = z.string().trim().min(1).optional();
 
@@ -108,6 +111,8 @@ const createContextSchema = z.object({
   title: z.string().trim().min(1).max(contextPayloadLimits.titleMax),
   summary: z.string().trim().min(1).max(contextPayloadLimits.summaryMax),
   content_md: z.string().trim().min(1).max(contextPayloadLimits.contentMdMax),
+  author_note_md: z.string().trim().min(1).max(contextPayloadLimits.authorNoteMax).optional(),
+  author_note_source: authorNoteSourceSchema.optional(),
   source_workstream: workstreamSchema,
   target_workstreams: z
     .array(workstreamSchema)
@@ -193,7 +198,8 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: "create_context",
     title: "Create Context",
-    description: "Upload markdown context with explicit Neptune routing metadata.",
+    description:
+      "Upload markdown context with explicit Neptune routing metadata. Include author_note_md with author_note_source=manual when the author supplied a note; if no note was supplied and the markdown has clear intent, provide a concise inferred author note with author_note_source=agent_inferred.",
     inputSchema: createContextSchema,
     handler: async (args, context) => {
       const response = await context.client.createContext(args as Parameters<NeptuneClient["createContext"]>[0]);
@@ -201,6 +207,24 @@ export const toolDefinitions: ToolDefinition[] = [
         text: formatUploadReceipt(response),
         response
       };
+    }
+  },
+  {
+    name: "update_context_author_note",
+    title: "Update Context Author Note",
+    description:
+      "Update the author-owned note for a context. Only the original context author is allowed to update this note.",
+    inputSchema: z.object({
+      context_id: uuidSchema,
+      author_note_md: z.string().trim().min(1).max(contextPayloadLimits.authorNoteMax),
+      author_note_source: authorNoteSourceSchema
+    }),
+    handler: (args, context) => {
+      const { context_id, ...input } = args;
+      return context.client.updateContextAuthorNote(
+        context_id as string,
+        input as Parameters<NeptuneClient["updateContextAuthorNote"]>[1]
+      );
     }
   },
   {

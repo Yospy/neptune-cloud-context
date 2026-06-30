@@ -18,6 +18,8 @@ import type {
   RelevantContextQuery,
   RetrieveContextQuery,
   ResolveContextRequest,
+  UpdateContextAuthorNoteRequest,
+  UpdateContextAuthorNoteResponse,
   UploadReceiptResponse
 } from "neptune-context-shared";
 import type { Logger } from "pino";
@@ -94,6 +96,11 @@ export type ContextRepository = {
     user: AuthenticatedUser
   ) => Promise<ContextSummary[]>;
   getContext: (contextId: string, user: AuthenticatedUser) => Promise<ContextRecord>;
+  updateContextAuthorNote: (
+    contextId: string,
+    user: AuthenticatedUser,
+    input: UpdateContextAuthorNoteRequest
+  ) => Promise<UpdateContextAuthorNoteResponse>;
   markContextRead: (
     contextId: string,
     user: AuthenticatedUser,

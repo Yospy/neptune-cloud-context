@@ -40,6 +40,10 @@ function createMockDeps(): NeptuneToolDeps {
         version: 1,
         created_at: "2026-05-18T00:00:00.000Z",
         content_hash: "sha256:test",
+        author_note_md: null,
+        author_note_source: null,
+        author_note_updated_at: null,
+        author_note_updated_by: null,
         created_by_user: userProfile,
         updated_by_user: userProfile
       }
@@ -47,6 +51,7 @@ function createMockDeps(): NeptuneToolDeps {
     retrieveContext: vi.fn(async () => ({ ok: true, contexts: [] })),
     listRelevantContext: vi.fn(async () => ({ ok: true, contexts: [] })),
     getContext: vi.fn(async () => ({ ok: true, context: { id: "ctx-1" } })),
+    updateContextAuthorNote: vi.fn(async () => ({ ok: true })),
     markContextReferenced: vi.fn(async () => ({ ok: true }))
   } as unknown as NeptuneClient;
 
@@ -157,6 +162,48 @@ describe("Neptune MCP tools", () => {
     expect(result.structuredContent).toMatchObject({ ok: true });
   });
 
+  it("passes author note fields through create_context", async () => {
+    const deps = createMockDeps();
+    const result = await callNeptuneTool(
+      "create_context",
+      createContextArgs({
+        author_note_md: "Canonical handoff for backend auth.",
+        author_note_source: "agent_inferred"
+      }),
+      deps
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(deps.client?.createContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author_note_md: "Canonical handoff for backend auth.",
+        author_note_source: "agent_inferred"
+      })
+    );
+  });
+
+  it("maps update_context_author_note to the SDK client", async () => {
+    const deps = createMockDeps();
+    const result = await callNeptuneTool(
+      "update_context_author_note",
+      {
+        context_id: "44444444-4444-4444-8444-444444444444",
+        author_note_md: "Manual author note for the canonical auth handoff.",
+        author_note_source: "manual"
+      },
+      deps
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(deps.client?.updateContextAuthorNote).toHaveBeenCalledWith(
+      "44444444-4444-4444-8444-444444444444",
+      {
+        author_note_md: "Manual author note for the canonical auth handoff.",
+        author_note_source: "manual"
+      }
+    );
+  });
+
   it("accepts project_index routing for create_context", async () => {
     const deps = createMockDeps();
     const result = await callNeptuneTool(
@@ -250,6 +297,13 @@ describe("Neptune MCP tools", () => {
   it.each([
     ["summary", { summary: oversizedString(contextPayloadLimits.summaryMax) }],
     ["content_md", { content_md: oversizedString(contextPayloadLimits.contentMdMax) }],
+    [
+      "author_note_md",
+      {
+        author_note_md: oversizedString(contextPayloadLimits.authorNoteMax),
+        author_note_source: "agent_inferred"
+      }
+    ],
     [
       "target_workstreams",
       {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { apiRequest, deleteProject, retrieveContext } from "../src/api.js";
+import { apiRequest, deleteProject, retrieveContext, updateContextAuthorNote } from "../src/api.js";
 import { NeptuneSdkError } from "../src/errors.js";
 
 describe("SDK API client", () => {
@@ -178,6 +178,47 @@ describe("SDK API client", () => {
     const [url] = fetch.mock.calls[0] as unknown as [URL, RequestInit];
     expect(String(url)).toBe(
       "http://127.0.0.1:8787/contexts/retrieve?project_id=22222222-2222-4222-8222-222222222222&intent=latest+context&mode=smart&limit=5"
+    );
+  });
+
+  it("updates context author notes", async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true })
+    }));
+
+    await updateContextAuthorNote(
+      "33333333-3333-4333-8333-333333333333",
+      {
+        author_note_md: "Canonical checkout session handoff.",
+        author_note_source: "manual"
+      },
+      {
+        fetch,
+        config: {
+          apiUrl: "http://127.0.0.1:8787",
+          auth: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: 1800000000,
+            tokenType: "bearer",
+            user: { id: "user-1" }
+          }
+        }
+      }
+    );
+
+    const [url, init] = fetch.mock.calls[0] as unknown as [URL, RequestInit];
+    expect(String(url)).toBe(
+      "http://127.0.0.1:8787/contexts/33333333-3333-4333-8333-333333333333/author-note"
+    );
+    expect(init.method).toBe("PUT");
+    expect(init.body).toBe(
+      JSON.stringify({
+        author_note_md: "Canonical checkout session handoff.",
+        author_note_source: "manual"
+      })
     );
   });
 

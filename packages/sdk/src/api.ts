@@ -22,6 +22,8 @@ import type {
   RetrieveContextResponse,
   ResolveContextRequest,
   ResolveContextResponse,
+  UpdateContextAuthorNoteRequest,
+  UpdateContextAuthorNoteResponse,
   UploadReceiptResponse
 } from "neptune-context-shared";
 import { refreshStoredAuth, shouldRefreshAuth } from "./auth.js";
@@ -229,6 +231,21 @@ export function getContext(contextId: string, options: NeptuneClientOptions = {}
   return apiRequest<GetContextResponse>(`/contexts/${encodeURIComponent(contextId)}`, {}, options);
 }
 
+export function updateContextAuthorNote(
+  contextId: string,
+  input: UpdateContextAuthorNoteRequest,
+  options: NeptuneClientOptions = {}
+) {
+  return apiRequest<UpdateContextAuthorNoteResponse>(
+    `/contexts/${encodeURIComponent(contextId)}/author-note`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input)
+    },
+    options
+  );
+}
+
 export function markContextRead(
   contextId: string,
   input: Partial<MarkContextReadRequest> = {},
@@ -289,6 +306,8 @@ export function createNeptuneClient(options: NeptuneClientOptions = {}) {
     listRelevantContext: (query: RelevantContextQuery) => listRelevantContext(query, options),
     retrieveContext: (query: RetrieveContextQuery) => retrieveContext(query, options),
     getContext: (contextId: string) => getContext(contextId, options),
+    updateContextAuthorNote: (contextId: string, input: UpdateContextAuthorNoteRequest) =>
+      updateContextAuthorNote(contextId, input, options),
     markContextRead: (contextId: string, input: Partial<MarkContextReadRequest> = {}) =>
       markContextRead(contextId, input, options),
     markContextReferenced: (

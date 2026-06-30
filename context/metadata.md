@@ -18,6 +18,10 @@ title
 summary
 content_md
 content_hash
+author_note_md
+author_note_source
+author_note_updated_at
+author_note_updated_by
 source_workstream
 target_workstreams
 domain
@@ -34,6 +38,8 @@ version
 ```
 
 `created_by_user` is the publishing user profile. `updated_by_user` is the user profile on the current `context_versions.created_by` row.
+
+Author note fields are nullable. When present, `author_note_md` is the author-owned intent layer for the context record. Only `contexts.created_by` may create or update it. `author_note_source = manual` means the author supplied the note; `agent_inferred` means the creating/updating agent inferred it from the markdown or user intent.
 
 ## Recommended Metadata
 
@@ -57,6 +63,7 @@ Context creation rejects oversized payloads before writes:
 
 ```text
 content_md <= 100000 chars
+author_note_md <= 1000 chars
 summary <= 500 chars
 code_areas <= 25 items, each <= 120 chars
 tags <= 25 items, each <= 80 chars
@@ -165,6 +172,9 @@ Version: 1
 Created at: 2026-05-16T12:04:22Z
 Published by: yash@example.com
 Updated by: yash@example.com
+Author note source: agent_inferred
+Author note updated at: 2026-05-16T12:04:22Z
+Author note: Canonical backend handoff for checkout session creation.
 Hash: sha256:91ab...
 ```
 
@@ -195,6 +205,10 @@ Hash: sha256:72cd...
 {
   "title": "Auth UI Login Contract",
   "summary": "Frontend login form sends email/password and expects access and refresh tokens.",
+  "author_note_md": "Canonical backend handoff for login request/response behavior.",
+  "author_note_source": "agent_inferred",
+  "author_note_updated_at": "2026-05-16T12:00:00Z",
+  "author_note_updated_by": "auth-user-uuid",
   "source_workstream": "frontend",
   "target_workstreams": ["backend"],
   "domain": "auth",

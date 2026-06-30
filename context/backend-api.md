@@ -78,6 +78,7 @@ GET  /projects/:project_id/members
 POST /contexts
 GET  /contexts/relevant
 GET  /contexts/:context_id
+PUT  /contexts/:context_id/author-note
 POST /contexts/:context_id/read
 POST /contexts/:context_id/reference
 POST /contexts/:context_id/resolve
@@ -139,6 +140,8 @@ uses org_members/project_members for authorization
   "title": "Auth UI Login Contract",
   "summary": "Frontend login form sends email/password and expects access and refresh tokens.",
   "content_md": "# Auth UI Login Contract\n...",
+  "author_note_md": "Canonical backend handoff for login request/response behavior.",
+  "author_note_source": "agent_inferred",
   "source_workstream": "frontend",
   "target_workstreams": ["backend"],
   "domain": "auth",
@@ -157,6 +160,7 @@ Create context payload limits:
 title <= 160 chars
 summary <= 500 chars
 content_md <= 100000 chars
+author_note_md <= 1000 chars
 domain <= 80 chars
 target_workstreams <= 9 items
 code_areas <= 25 items, each <= 120 chars
@@ -165,6 +169,32 @@ repo_paths <= 50 items, each <= 500 chars
 related_files <= 50 items, each <= 500 chars
 inference_notes <= 1000 chars
 retrieval query <= 500 chars
+```
+
+`author_note_md` and `author_note_source` are optional, but must be provided together. `author_note_source` is one of:
+
+```text
+manual
+agent_inferred
+```
+
+## Update Context Author Note
+
+`PUT /contexts/:context_id/author-note` updates the author-owned note for one context.
+
+```json
+{
+  "author_note_md": "Canonical backend handoff for checkout session creation.",
+  "author_note_source": "manual"
+}
+```
+
+Rules:
+
+```text
+Only the original `contexts.created_by` user can update the author note.
+Project members can update context content through context upload, but cannot update another author's note.
+Non-authors receive AUTHOR_NOTE_ACCESS_DENIED.
 ```
 
 ## Relevant Context Query
@@ -215,6 +245,8 @@ limit
 ```
 
 Default `smart` mode hard-filters only by project membership, active status, and project ID. Intent and routing metadata are ranking signals, so vague requests like "latest context", "uploaded today", or rough keywords still return recent active project candidates instead of false-empty results.
+
+Smart intent ranking is partial-term tolerant: a context matching some meaningful intent terms ranks ahead of unrelated recency fallback, even when the full natural-language query contains extra words that do not match.
 
 `strict` mode applies routing metadata and full-text matches as hard filters for callers that need legacy exactness.
 
@@ -268,7 +300,9 @@ Never trust client-provided org_id without checking membership.
 Every project action must verify project_members.
 Every context write must create a context_events row.
 Every content change must create a context_versions row.
+Every author note update must create a context_events row.
 Context responses and upload receipts must expose `created_by_user` and `updated_by_user`.
+Context responses and upload receipts must expose author note fields when present.
 Duplicate content_hash for same project/title should not create a new version.
 Resolved contexts stay queryable but are excluded from active relevant results by default.
 Duplicate org/project slugs must return 409 CONFLICT, not 500 INTERNAL_ERROR.

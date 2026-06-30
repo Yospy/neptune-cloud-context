@@ -22,6 +22,10 @@ export function formatUploadReceipt(
     version: row.version,
     created_at: row.created_at,
     content_hash: row.content_hash,
+    author_note_md: row.author_note_md ?? null,
+    author_note_source: row.author_note_source ?? null,
+    author_note_updated_at: row.author_note_updated_at ?? null,
+    author_note_updated_by: row.author_note_updated_by ?? null,
     created_by_user: attribution.created_by_user,
     updated_by_user: attribution.updated_by_user
   };
