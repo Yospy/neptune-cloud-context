@@ -142,6 +142,12 @@ summary text not null
 content_md text not null
 content_hash text not null
 
+author_note_md text
+author_note_source text check in ('manual', 'agent_inferred')
+author_note_updated_at timestamptz
+author_note_updated_by uuid references auth.users(id)
+author_note_updated_by also references user_profiles(id)
+
 source_workstream text not null
 target_workstreams text[] not null
 domain text not null
@@ -255,6 +261,7 @@ neptune_sync_auth_user_profile
 neptune_create_org
 neptune_create_project
 neptune_upsert_context
+neptune_update_context_author_note
 neptune_list_relevant_context
 neptune_reference_context
 neptune_resolve_context

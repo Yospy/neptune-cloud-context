@@ -28,7 +28,7 @@ No MCP tool calls Supabase or backend fetch directly.
 ```text
 packages/mcp
 package name: neptune-context-mcp
-current published version: 0.1.6
+current published version: 0.1.8
 language: TypeScript
 transport: stdio for V1
 runtime: Node.js >=20
@@ -42,6 +42,7 @@ retrieve_context
 list_relevant_context
 get_context
 create_context
+update_context_author_note
 mark_context_referenced
 ```
 
@@ -68,6 +69,29 @@ Use first to identify the current repo's Neptune project.
 Use after metadata is known.
 
 Must return a deterministic upload receipt.
+
+Optional author-note fields:
+
+```text
+author_note_md
+author_note_source = manual | agent_inferred
+```
+
+If the user supplies a note, pass it with `manual`. If the user does not supply a note and the markdown has clear author intent, the agent may infer a concise note and pass it with `agent_inferred`.
+
+### update_context_author_note
+
+Use only when the current user is the original context author or explicitly asks to update their own author note.
+
+Required fields:
+
+```text
+context_id
+author_note_md
+author_note_source = manual | agent_inferred
+```
+
+Non-authors receive `AUTHOR_NOTE_ACCESS_DENIED`.
 
 ### retrieve_context
 

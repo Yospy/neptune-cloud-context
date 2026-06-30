@@ -2,13 +2,37 @@
 
 ## Active Sprint
 
-`sprints/2026-06-29-smart-context-retrieval.md`
+`sprints/2026-06-30-author-note.md`
 
 ## Previous Sprint
 
-`sprints/2026-06-29-project-delete-and-logout.md`
+`sprints/2026-06-30-smart-retrieval-partial-term-ranking.md`
 
 ## Tasks
+
+- [x] Create author note sprint plan.
+- [x] Add Supabase author-note schema, RPC, and search migration.
+- [x] Update shared author-note contracts and errors.
+- [x] Wire backend author-note route, repository, and tests.
+- [x] Update SDK author-note API and receipt formatting.
+- [x] Update MCP author-note tools and tests.
+- [x] Update context docs and package versions.
+- [x] Run focused and workspace verification.
+- [x] Review diff, side effects, and publish commands.
+
+- [x] Create smart retrieval partial-term ranking sprint plan.
+- [x] Replace smart retrieval RPC with partial-term ranking.
+- [x] Add backend regression coverage.
+- [x] Update context docs.
+- [x] Run focused and workspace verification.
+- [x] Review diff, side effects, and deployment notes.
+
+- [x] Create project checkout binding sprint plan.
+- [x] Add CLI project checkout command.
+- [x] Add focused checkout tests.
+- [x] Update CLI docs/help.
+- [x] Run verification and independent subagent review.
+- [x] Review diff, side effects, and publish commands.
 
 - [x] Create agent intent retrieval sprint plan.
 - [x] Extend shared retrieval contracts.

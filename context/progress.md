@@ -1,15 +1,15 @@
 # Progress Snapshot
 
-Updated: 2026-06-29
+Updated: 2026-06-30
 
 ## Current State
 
 ```text
 Backend: running locally on http://127.0.0.1:8787
-CLI: neptune-context-cli@0.1.11
-SDK: neptune-context@0.1.9
-Shared package: neptune-context-shared@0.1.6
-MCP: neptune-context-mcp@0.1.7, stdio transport
+CLI: neptune-context-cli@0.1.13
+SDK: neptune-context@0.1.10
+Shared package: neptune-context-shared@0.1.7
+MCP: neptune-context-mcp@0.1.8, stdio transport
 Installer: neptune mcp install for Codex and Claude Code
 Setup: neptune setup for login/org/project/repo binding/MCP install
 Doctor: neptune doctor for Node/auth/backend/binding/MCP checks
@@ -38,31 +38,33 @@ provider: github
 backend auth/profile/org/project/context lifecycle
 SDK config/session/API/binding/metadata/error helpers
 deterministic SDK inferContextMetadata
-MCP package with exact 5 context-work tools
+MCP package with exact 6 context-work tools
 OpenAI sample.py chat-style MCP tester
 npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
-CLI package rename/public metadata: neptune-context-cli@0.1.11
+CLI package rename/public metadata: neptune-context-cli@0.1.13
 neptune mcp install --target codex|claude|all with --dry-run
 neptune setup with flags/prompts for first-user onboarding
 neptune doctor diagnostics for local install health
 neptune org/project binding commands and project deletion
 smart context retrieval through GET /contexts/retrieve and MCP retrieve_context
+author-owned context notes with manual/agent-inferred source
 ```
 
 ## Latest Regression
 
 ```text
-corepack pnpm --filter @neptune/backend test      passed, 63 tests plus 1 skipped integration
-corepack pnpm --filter neptune-context test       passed, 30 tests
-corepack pnpm --filter neptune-context-mcp test   passed, 24 tests
-corepack pnpm --filter neptune-context-cli test   passed, 42 tests
+corepack pnpm --filter neptune-context-shared test passed, 29 tests
+corepack pnpm --filter @neptune/backend test       passed, 71 tests plus 1 skipped integration
+corepack pnpm --filter neptune-context test        passed, 32 tests
+corepack pnpm --filter neptune-context-mcp test    passed, 27 tests
+corepack pnpm --filter neptune-context-cli test    passed, 48 tests
 corepack pnpm typecheck                           passed
 corepack pnpm test                                passed
 corepack pnpm build                               passed
-pnpm pack                                         passed for shared 0.1.6, SDK 0.1.9, MCP 0.1.7
-local MCP stdio tools/list                        passed with retrieve_context
-live SQL neptune_retrieve_context probes          passed
+pnpm pack                                         not yet rerun for author-note release
+local MCP stdio tools/list                        not yet rerun for author-note release
+live SQL author-note migration                    applied and readback verified
 ```
 
 ## Latest Live Backend Edge Case
@@ -120,14 +122,14 @@ neptune doctor now defaults to real child_process execFile for Claude config che
 Publish/final install verification:
 
 ```text
-neptune-context-shared@0.1.5  release target
-neptune-context@0.1.8         release target
-neptune-context-mcp@0.1.6     release target
-neptune-context-cli@0.1.11    release target
-fresh npm install             passed, 107 packages, 0 vulnerabilities
-neptune --help                passed from fresh install
-neptune mcp install dry-run   passed from fresh install
-neptune doctor --target all   passed, including MCP tools/list probe
+neptune-context-shared@0.1.7  release target
+neptune-context@0.1.10        release target
+neptune-context-mcp@0.1.8     release target
+neptune-context-cli@0.1.13    release target
+fresh npm install             not yet rerun for author-note release
+neptune --help                not yet rerun for author-note release
+neptune mcp install dry-run   not yet rerun for author-note release
+neptune doctor --target all   not yet rerun for author-note release
 ```
 
 Runtime note:

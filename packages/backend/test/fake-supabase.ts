@@ -64,6 +64,7 @@ function queryScore(row: Row, query: unknown) {
 
   const weighted = [
     [row.title, 8],
+    [row.author_note_md, 8],
     [row.summary, 5],
     [row.tags, 5],
     [row.domain, 5],
@@ -90,6 +91,7 @@ function queryScore(row: Row, query: unknown) {
 function searchableText(row: Row) {
   return [
     row.title,
+    row.author_note_md,
     row.summary,
     row.tags,
     row.domain,
@@ -244,7 +246,7 @@ function retrieveContextRows(tables: FakeTables, args: Record<string, unknown>) 
           : mode === "strict"
             ? "Strict filters matched; ordered by latest update."
             : __queryScore > 0
-              ? "Matched intent by project-wide full-text search."
+              ? "Matched one or more intent terms by project-wide full-text search."
               : __hintScore > 0
                 ? "No strong intent match; boosted by routing hints."
                 : query
@@ -253,6 +255,206 @@ function retrieveContextRows(tables: FakeTables, args: Record<string, unknown>) 
     }));
 
   return { data: rows, error: null };
+}
+
+function upsertContext(tables: FakeTables, args: Record<string, unknown>) {
+  const payload = (args.p_payload ?? {}) as Row;
+  const projectId = payload.project_id;
+  const actorUserId = args.p_actor_user_id;
+  const project = (tables.projects ?? []).find((row) => row.id === projectId);
+
+  if (!project) {
+    return { data: null, error: { message: "PROJECT_NOT_FOUND" } };
+  }
+
+  const isMember = (tables.project_members ?? []).some(
+    (row) => row.project_id === projectId && row.user_id === actorUserId
+  );
+
+  if (!isMember) {
+    return { data: null, error: { message: "PROJECT_ACCESS_DENIED" } };
+  }
+
+  const authorNoteMd =
+    typeof payload.author_note_md === "string" && payload.author_note_md.trim()
+      ? payload.author_note_md.trim()
+      : null;
+  const authorNoteSource =
+    typeof payload.author_note_source === "string" && payload.author_note_source.trim()
+      ? payload.author_note_source.trim()
+      : null;
+  const authorNoteRequested = authorNoteMd !== null;
+
+  if (authorNoteRequested && !["manual", "agent_inferred"].includes(String(authorNoteSource))) {
+    return { data: null, error: { message: "VALIDATION_FAILED" } };
+  }
+
+  if (!authorNoteRequested && authorNoteSource !== null) {
+    return { data: null, error: { message: "VALIDATION_FAILED" } };
+  }
+
+  const org = (tables.orgs ?? []).find((row) => row.id === project.org_id);
+  const existing = (tables.contexts ?? []).find(
+    (row) => row.project_id === projectId && row.title === payload.title
+  );
+
+  if (existing && authorNoteRequested && existing.created_by !== actorUserId) {
+    return { data: null, error: { message: "AUTHOR_NOTE_ACCESS_DENIED" } };
+  }
+
+  const applyPayload = (row: Row, version: number) => {
+    Object.assign(row, {
+      summary: payload.summary,
+      content_md: payload.content_md,
+      content_hash: payload.content_hash,
+      source_workstream: payload.source_workstream,
+      target_workstreams: payload.target_workstreams ?? [],
+      domain: payload.domain,
+      code_areas: payload.code_areas ?? [],
+      context_type: payload.context_type,
+      priority: payload.priority ?? "normal",
+      status: "active",
+      repo_paths: payload.repo_paths ?? [],
+      related_files: payload.related_files ?? [],
+      tags: payload.tags ?? [],
+      confidence_score: payload.confidence_score,
+      inference_notes: payload.inference_notes,
+      version,
+      updated_at: now()
+    });
+
+    if (authorNoteRequested) {
+      Object.assign(row, {
+        author_note_md: authorNoteMd,
+        author_note_source: authorNoteSource,
+        author_note_updated_at: now(),
+        author_note_updated_by: actorUserId
+      });
+    }
+  };
+
+  const context =
+    existing ??
+    {
+      id: nextId(),
+      org_id: project.org_id,
+      project_id: projectId,
+      title: payload.title,
+      created_by: actorUserId,
+      created_at: now()
+    };
+
+  const contentChanged = !existing || existing.content_hash !== payload.content_hash;
+  const authorNoteChanged =
+    authorNoteRequested &&
+    (existing?.author_note_md !== authorNoteMd || existing?.author_note_source !== authorNoteSource);
+  const nextVersion = existing ? Number(existing.version ?? 1) + (contentChanged ? 1 : 0) : 1;
+
+  applyPayload(context, nextVersion);
+
+  if (!existing) {
+    (tables.contexts ?? []).push(context);
+  }
+
+  if (contentChanged) {
+    (tables.context_versions ?? []).push({
+      id: nextId(),
+      context_id: context.id,
+      org_id: context.org_id,
+      project_id: context.project_id,
+      version: context.version,
+      content_md: context.content_md,
+      content_hash: context.content_hash,
+      metadata: { ...payload, content_md: undefined },
+      created_by: actorUserId,
+      created_at: now()
+    });
+  }
+
+  if (contentChanged || authorNoteChanged) {
+    (tables.context_events ?? []).push({
+      id: nextId(),
+      org_id: context.org_id,
+      project_id: context.project_id,
+      context_id: context.id,
+      actor_user_id: actorUserId,
+      event_type: contentChanged ? (existing ? "context.updated" : "context.created") : "context.author_note.updated",
+      payload: { content_hash: context.content_hash, version: context.version },
+      created_at: now()
+    });
+  }
+
+  return {
+    data: {
+      ok: true,
+      changed: contentChanged || authorNoteChanged,
+      receipt: {
+        context_id: context.id,
+        org: org?.slug,
+        project: project.slug,
+        title: context.title,
+        source_workstream: context.source_workstream,
+        target_workstreams: context.target_workstreams,
+        domain: context.domain,
+        code_areas: context.code_areas,
+        context_type: context.context_type,
+        status: context.status,
+        version: context.version,
+        created_at: context.created_at,
+        content_hash: context.content_hash,
+        author_note_md: context.author_note_md ?? null,
+        author_note_source: context.author_note_source ?? null,
+        author_note_updated_at: context.author_note_updated_at ?? null,
+        author_note_updated_by: context.author_note_updated_by ?? null
+      }
+    },
+    error: null
+  };
+}
+
+function updateContextAuthorNote(tables: FakeTables, args: Record<string, unknown>) {
+  const context = (tables.contexts ?? []).find((row) => row.id === args.p_context_id);
+
+  if (!context) {
+    return { data: null, error: { message: "CONTEXT_NOT_FOUND" } };
+  }
+
+  const isMember = (tables.project_members ?? []).some(
+    (row) => row.project_id === context.project_id && row.user_id === args.p_actor_user_id
+  );
+
+  if (!isMember) {
+    return { data: null, error: { message: "PROJECT_ACCESS_DENIED" } };
+  }
+
+  if (context.created_by !== args.p_actor_user_id) {
+    return { data: null, error: { message: "AUTHOR_NOTE_ACCESS_DENIED" } };
+  }
+
+  if (!args.p_author_note_md || !["manual", "agent_inferred"].includes(String(args.p_author_note_source))) {
+    return { data: null, error: { message: "VALIDATION_FAILED" } };
+  }
+
+  Object.assign(context, {
+    author_note_md: args.p_author_note_md,
+    author_note_source: args.p_author_note_source,
+    author_note_updated_at: now(),
+    author_note_updated_by: args.p_actor_user_id,
+    updated_at: now()
+  });
+
+  (tables.context_events ?? []).push({
+    id: nextId(),
+    org_id: context.org_id,
+    project_id: context.project_id,
+    context_id: context.id,
+    actor_user_id: args.p_actor_user_id,
+    event_type: "context.author_note.updated",
+    payload: { author_note_source: args.p_author_note_source },
+    created_at: now()
+  });
+
+  return { data: { ok: true }, error: null };
 }
 
 class FakeQuery {
@@ -425,11 +627,17 @@ export function createFakeSupabase(tables: FakeTables) {
       return new FakeQuery(tables, tableName);
     },
     async rpc(fn: string, args: Record<string, unknown> = {}) {
+      if (fn === "neptune_upsert_context") {
+        return upsertContext(tables, args);
+      }
       if (fn === "neptune_list_relevant_context") {
         return relevantContextRows(tables, args);
       }
       if (fn === "neptune_retrieve_context") {
         return retrieveContextRows(tables, args);
+      }
+      if (fn === "neptune_update_context_author_note") {
+        return updateContextAuthorNote(tables, args);
       }
       throw new Error("RPC is not implemented by createFakeSupabase.");
     }

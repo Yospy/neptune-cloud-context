@@ -10,7 +10,8 @@ import {
   projectIdParamsSchema,
   relevantContextQuerySchema,
   retrieveContextQuerySchema,
-  resolveContextRequestSchema
+  resolveContextRequestSchema,
+  updateContextAuthorNoteRequestSchema
 } from "neptune-context-shared";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
@@ -259,6 +260,28 @@ export function createApp(deps: AppDeps) {
 
     const context = await deps.repository.getContext(parsed.data.context_id, c.var.user);
     return c.json({ ok: true, context });
+  });
+
+  app.put("/contexts/:context_id/author-note", async (c) => {
+    const params = contextIdParamsSchema.safeParse(c.req.param());
+
+    if (!params.success) {
+      throw validationError(params.error.flatten());
+    }
+
+    const body = updateContextAuthorNoteRequestSchema.safeParse(await readJson(c));
+
+    if (!body.success) {
+      throw validationError(body.error.flatten());
+    }
+
+    const result = await deps.repository.updateContextAuthorNote(
+      params.data.context_id,
+      c.var.user,
+      body.data
+    );
+
+    return c.json(result);
   });
 
   app.post("/contexts/:context_id/read", async (c) => {

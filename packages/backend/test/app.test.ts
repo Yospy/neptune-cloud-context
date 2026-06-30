@@ -98,6 +98,10 @@ function repository() {
         version: 1,
         created_at: "2026-05-16T12:00:00.000Z",
         content_hash: "sha256:test",
+        author_note_md: null,
+        author_note_source: null,
+        author_note_updated_at: null,
+        author_note_updated_by: null,
         created_by_user: userProfile,
         updated_by_user: userProfile
       }
@@ -107,6 +111,7 @@ function repository() {
     getContext: vi.fn(async () => {
       throw new AppError("CONTEXT_NOT_FOUND", "Context not found.");
     }),
+    updateContextAuthorNote: vi.fn(async () => ({ ok: true })),
     markContextRead: vi.fn(async () => undefined),
     markContextReferenced: vi.fn(async () => undefined),
     resolveContext: vi.fn(async () => undefined)
@@ -579,6 +584,50 @@ describe("createApp", () => {
       error: { code: "RATE_LIMITED" }
     });
     expect(repo.getContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates context author note", async () => {
+    const repo = repository();
+    const app = createApp({ authClient: authClient(), repository: repo });
+    const response = await app.request(`/contexts/${contextId}/author-note`, {
+      method: "PUT",
+      headers: { Authorization: "Bearer token", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        author_note_md: "Canonical backend handoff for checkout sessions.",
+        author_note_source: "manual"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(repo.updateContextAuthorNote).toHaveBeenCalledWith(
+      contextId,
+      expect.objectContaining({ id: userId }),
+      {
+        author_note_md: "Canonical backend handoff for checkout sessions.",
+        author_note_source: "manual"
+      }
+    );
+  });
+
+  it("validates context author note updates", async () => {
+    const repo = repository();
+    const app = createApp({ authClient: authClient(), repository: repo });
+    const response = await app.request(`/contexts/${contextId}/author-note`, {
+      method: "PUT",
+      headers: { Authorization: "Bearer token", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        author_note_md: "Canonical backend handoff for checkout sessions.",
+        author_note_source: "bot"
+      })
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_FAILED" }
+    });
+    expect(repo.updateContextAuthorNote).not.toHaveBeenCalled();
   });
 
   it("marks context read with default agent name when body is empty", async () => {

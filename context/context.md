@@ -118,6 +118,7 @@ user profile sync
 org create/list/member list
 project create/list/member list
 context create/relevant/get/read/reference/resolve
+context author-note create/update with author-only ownership
 duplicate org/project slug conflicts as 409 CONFLICT
 ```
 

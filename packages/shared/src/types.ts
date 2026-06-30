@@ -1,4 +1,10 @@
-import type { ContextStatus, ContextType, Priority, Workstream } from "./enums.js";
+import type {
+  AuthorNoteSource,
+  ContextStatus,
+  ContextType,
+  Priority,
+  Workstream
+} from "./enums.js";
 
 export type OrgSummary = {
   id: string;
@@ -56,6 +62,10 @@ export type UploadReceipt = {
   version: number;
   created_at: string;
   content_hash: string;
+  author_note_md: string | null;
+  author_note_source: AuthorNoteSource | null;
+  author_note_updated_at: string | null;
+  author_note_updated_by: string | null;
   created_by_user: UserProfile;
   updated_by_user: UserProfile;
 };
@@ -80,6 +90,10 @@ export type ContextSummary = {
   updated_at: string;
   version: number;
   content_hash: string;
+  author_note_md: string | null;
+  author_note_source: AuthorNoteSource | null;
+  author_note_updated_at: string | null;
+  author_note_updated_by: string | null;
   score?: number;
   match_kind?: "full_text" | "hint" | "recent";
   match_reason?: string;
@@ -160,5 +174,9 @@ export type MarkContextReferencedResponse = {
 };
 
 export type ResolveContextResponse = {
+  ok: true;
+};
+
+export type UpdateContextAuthorNoteResponse = {
   ok: true;
 };

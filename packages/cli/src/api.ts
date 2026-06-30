@@ -15,5 +15,6 @@ export {
   markContextRead,
   markContextReferenced,
   resolveContext,
+  updateContextAuthorNote,
   type FetchLike
 } from "neptune-context";

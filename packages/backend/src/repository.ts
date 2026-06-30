@@ -20,6 +20,8 @@ import type {
   RelevantContextQuery,
   RetrieveContextQuery,
   ResolveContextRequest,
+  UpdateContextAuthorNoteRequest,
+  UpdateContextAuthorNoteResponse,
   UploadReceipt,
   UploadReceiptResponse,
   UserProfile,
@@ -75,6 +77,10 @@ export type ContextRow = {
   version: number;
   confidence_score?: number | null;
   inference_notes?: string | null;
+  author_note_md?: string | null;
+  author_note_source?: UploadReceipt["author_note_source"];
+  author_note_updated_at?: string | null;
+  author_note_updated_by?: string | null;
   score?: number | null;
   match_kind?: "full_text" | "hint" | "recent" | null;
   match_reason?: string | null;
@@ -174,6 +180,10 @@ function raiseOnError(error: DbError | null, fallbackMessage: string): void {
     throw new AppError("CONTEXT_NOT_FOUND", "Context not found.");
   }
 
+  if (codeText.includes("AUTHOR_NOTE_ACCESS_DENIED")) {
+    throw new AppError("AUTHOR_NOTE_ACCESS_DENIED", "Only the context author can update the author note.");
+  }
+
   if (codeText.includes("VALIDATION_FAILED")) {
     throw new AppError("VALIDATION_FAILED", "Request validation failed.");
   }
@@ -200,6 +210,10 @@ function contextSummary(row: ContextRow, attribution: ContextAttribution): Conte
     updated_at: row.updated_at,
     version: row.version,
     content_hash: row.content_hash,
+    author_note_md: row.author_note_md ?? null,
+    author_note_source: row.author_note_source ?? null,
+    author_note_updated_at: row.author_note_updated_at ?? null,
+    author_note_updated_by: row.author_note_updated_by ?? null,
     created_by_user: attribution.created_by_user,
     updated_by_user: attribution.updated_by_user
   };
@@ -510,6 +524,28 @@ export class SupabaseContextRepository implements ContextRepository {
     return this.enrichUploadReceipt(data);
   }
 
+  async updateContextAuthorNote(
+    contextId: string,
+    user: AuthenticatedUser,
+    input: UpdateContextAuthorNoteRequest
+  ): Promise<UpdateContextAuthorNoteResponse> {
+    const { data, error } = await this.client.rpc("neptune_update_context_author_note", {
+      p_actor_user_id: user.id,
+      p_context_id: contextId,
+      p_author_note_md: input.author_note_md,
+      p_author_note_source: input.author_note_source
+    });
+
+    raiseOnError(error, "Failed to update context author note.");
+
+    const response = data as UpdateContextAuthorNoteResponse;
+    if (response?.ok !== true) {
+      throw new AppError("INTERNAL_ERROR", "Invalid author note response from database.");
+    }
+
+    return response;
+  }
+
   async listRelevantContext(
     query: RelevantContextQuery,
     user: AuthenticatedUser
@@ -731,6 +767,10 @@ export class SupabaseContextRepository implements ContextRepository {
       ...response,
       receipt: {
         ...response.receipt,
+        author_note_md: row.author_note_md ?? null,
+        author_note_source: row.author_note_source ?? null,
+        author_note_updated_at: row.author_note_updated_at ?? null,
+        author_note_updated_by: row.author_note_updated_by ?? null,
         created_by_user: attribution.created_by_user,
         updated_by_user: attribution.updated_by_user
       }

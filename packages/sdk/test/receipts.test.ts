@@ -32,6 +32,10 @@ describe("SDK receipt formatting", () => {
           version: 1,
           created_at: "2026-05-16T12:04:22Z",
           content_hash: "sha256:91ab",
+          author_note_md: null,
+          author_note_source: null,
+          author_note_updated_at: null,
+          author_note_updated_by: null,
           created_by_user: user,
           updated_by_user: user
         }
@@ -53,5 +57,35 @@ Created at: 2026-05-16T12:04:22Z
 Published by: yash@example.com
 Updated by: yash@example.com
 Hash: sha256:91ab`);
+  });
+
+  it("includes author notes when present", () => {
+    expect(
+      formatUploadReceipt({
+        ok: true,
+        changed: true,
+        receipt: {
+          context_id: "ctx_8f31",
+          org: "acme",
+          project: "checkout",
+          title: "Auth UI Login Contract",
+          source_workstream: "frontend",
+          target_workstreams: ["backend"],
+          domain: "auth",
+          code_areas: ["login", "session"],
+          context_type: "ui_contract",
+          status: "active",
+          version: 1,
+          created_at: "2026-05-16T12:04:22Z",
+          content_hash: "sha256:91ab",
+          author_note_md: "Canonical handoff for backend checkout sessions.",
+          author_note_source: "agent_inferred",
+          author_note_updated_at: "2026-05-16T12:04:23Z",
+          author_note_updated_by: user.id,
+          created_by_user: user,
+          updated_by_user: user
+        }
+      })
+    ).toContain("Author note: Canonical handoff for backend checkout sessions.");
   });
 });

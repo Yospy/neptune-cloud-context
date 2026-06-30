@@ -7,7 +7,8 @@ import {
   errorCodes,
   markContextReferencedRequestSchema,
   relevantContextQuerySchema,
-  retrieveContextQuerySchema
+  retrieveContextQuerySchema,
+  updateContextAuthorNoteRequestSchema
 } from "../src/index.js";
 
 const projectId = "11111111-1111-4111-8111-111111111111";
@@ -89,6 +90,13 @@ describe("shared schemas", () => {
     ["summary", { summary: oversizedString(contextPayloadLimits.summaryMax) }],
     ["content_md", { content_md: oversizedString(contextPayloadLimits.contentMdMax) }],
     [
+      "author_note_md",
+      {
+        author_note_md: oversizedString(contextPayloadLimits.authorNoteMax),
+        author_note_source: "manual"
+      }
+    ],
+    [
       "target_workstreams",
       {
         target_workstreams: oversizedArray(
@@ -116,6 +124,31 @@ describe("shared schemas", () => {
       { inference_notes: oversizedString(contextPayloadLimits.inferenceNotesMax) }
     ]
   ])("rejects oversized create context %s", (_name, overrides) => {
+    const result = createContextRequestSchema.safeParse(createContextPayload(overrides));
+
+    expect(result.success).toBe(false);
+  });
+
+  it("validates create context author notes", () => {
+    const parsed = createContextRequestSchema.parse(
+      createContextPayload({
+        author_note_md: "Canonical checkout handoff for backend.",
+        author_note_source: "manual"
+      })
+    );
+
+    expect(parsed.author_note_md).toBe("Canonical checkout handoff for backend.");
+    expect(parsed.author_note_source).toBe("manual");
+  });
+
+  it.each([
+    ["note without source", { author_note_md: "Canonical checkout handoff." }],
+    ["source without note", { author_note_source: "agent_inferred" }],
+    [
+      "invalid source",
+      { author_note_md: "Canonical checkout handoff.", author_note_source: "bot" }
+    ]
+  ])("rejects invalid create context author note %s", (_name, overrides) => {
     const result = createContextRequestSchema.safeParse(createContextPayload(overrides));
 
     expect(result.success).toBe(false);
@@ -196,8 +229,21 @@ describe("shared schemas", () => {
     expect(errorCodes).toContain("ORG_NOT_FOUND");
     expect(errorCodes).toContain("PROJECT_ACCESS_DENIED");
     expect(errorCodes).toContain("PROJECT_NOT_FOUND");
+    expect(errorCodes).toContain("AUTHOR_NOTE_ACCESS_DENIED");
     expect(errorCodes).toContain("VALIDATION_FAILED");
     expect(errorCodes).toContain("RATE_LIMITED");
+  });
+
+  it("validates author note update payloads", () => {
+    expect(
+      updateContextAuthorNoteRequestSchema.parse({
+        author_note_md: "Use this as the canonical checkout contract.",
+        author_note_source: "agent_inferred"
+      })
+    ).toEqual({
+      author_note_md: "Use this as the canonical checkout contract.",
+      author_note_source: "agent_inferred"
+    });
   });
 
   it("validates org and project bootstrap payloads", () => {

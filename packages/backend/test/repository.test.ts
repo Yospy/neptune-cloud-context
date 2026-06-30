@@ -253,6 +253,37 @@ describe("SupabaseContextRepository", () => {
     );
   });
 
+  it("passes author notes through context creation", async () => {
+    const tables = contextTables();
+    tables.contexts[0].author_note_md = "Canonical checkout contract for backend.";
+    tables.contexts[0].author_note_source = "manual";
+    tables.contexts[0].author_note_updated_at = createdAt;
+    tables.contexts[0].author_note_updated_by = userId;
+    const client = rpcClient(receipt(1, true), null, tables);
+    const repo = new SupabaseContextRepository(client);
+
+    const result = await repo.createContext(
+      createContextInput({
+        author_note_md: "Canonical checkout contract for backend.",
+        author_note_source: "manual"
+      }),
+      { id: userId }
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "neptune_upsert_context",
+      expect.objectContaining({
+        p_payload: expect.objectContaining({
+          author_note_md: "Canonical checkout contract for backend.",
+          author_note_source: "manual"
+        })
+      })
+    );
+    expect(result.receipt.author_note_md).toBe("Canonical checkout contract for backend.");
+    expect(result.receipt.author_note_source).toBe("manual");
+    expect(result.receipt.author_note_updated_by).toBe(userId);
+  });
+
   it("returns duplicate context receipts from the upsert RPC", async () => {
     const client = rpcClient(receipt(1, false), null, contextTables());
     const repo = new SupabaseContextRepository(client);
@@ -280,6 +311,39 @@ describe("SupabaseContextRepository", () => {
     expect(result.receipt.updated_by_user.id).toBe(otherUserId);
   });
 
+  it("preserves author notes when another member updates context content", async () => {
+    const tables = contextTables();
+    tables.contexts[0].author_note_md = "Original author note.";
+    tables.contexts[0].author_note_source = "manual";
+    tables.contexts[0].author_note_updated_at = createdAt;
+    tables.contexts[0].author_note_updated_by = userId;
+    tables.project_members.push({
+      org_id: orgId,
+      project_id: projectId,
+      user_id: otherUserId,
+      role: "editor",
+      default_workstream: "backend",
+      created_at: createdAt
+    });
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const result = await repo.createContext(
+      createContextInput({ content_md: "# Auth UI Login Contract\n\nChanged by another member." }),
+      { id: otherUserId }
+    );
+
+    expect(result.changed).toBe(true);
+    expect(result.receipt.version).toBe(2);
+    expect(result.receipt.author_note_md).toBe("Original author note.");
+    expect(result.receipt.author_note_source).toBe("manual");
+    expect(tables.contexts[0]).toMatchObject({
+      content_md: "# Auth UI Login Contract\n\nChanged by another member.",
+      author_note_md: "Original author note.",
+      author_note_source: "manual",
+      author_note_updated_by: userId
+    });
+  });
+
   it("maps RPC access errors to deterministic app errors", async () => {
     const client = rpcClient(null, { message: "PROJECT_ACCESS_DENIED" });
     const repo = new SupabaseContextRepository(client);
@@ -288,6 +352,53 @@ describe("SupabaseContextRepository", () => {
       repo.createContext(createContextInput({ project_id: otherProjectId }), { id: userId })
     ).rejects.toMatchObject({
       code: "PROJECT_ACCESS_DENIED"
+    });
+  });
+
+  it("updates author notes through the author-note RPC", async () => {
+    const tables = contextTables();
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const result = await repo.updateContextAuthorNote(contextId, { id: userId }, {
+      author_note_md: "Use this as the canonical backend checkout contract.",
+      author_note_source: "agent_inferred"
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(tables.contexts[0]).toMatchObject({
+      author_note_md: "Use this as the canonical backend checkout contract.",
+      author_note_source: "agent_inferred",
+      author_note_updated_by: userId
+    });
+    expect(tables.context_events).toEqual([
+      expect.objectContaining({
+        context_id: contextId,
+        actor_user_id: userId,
+        event_type: "context.author_note.updated"
+      })
+    ]);
+  });
+
+  it("rejects non-author author note updates", async () => {
+    const tables = contextTables();
+    tables.project_members.push({
+      org_id: orgId,
+      project_id: projectId,
+      user_id: otherUserId,
+      role: "editor",
+      default_workstream: "backend",
+      created_at: createdAt
+    });
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    await expect(
+      repo.updateContextAuthorNote(contextId, { id: otherUserId }, {
+        author_note_md: "Another user's attempted note.",
+        author_note_source: "manual"
+      })
+    ).rejects.toMatchObject({
+      code: "AUTHOR_NOTE_ACCESS_DENIED",
+      status: 403
     });
   });
 
@@ -735,6 +846,152 @@ describe("SupabaseContextRepository", () => {
 
     expect(contexts.map((context) => context.title)).toEqual(["Newest Context Upload"]);
     expect(contexts[0].match_kind).toBe("recent");
+  });
+
+  it("ranks partial smart intent matches ahead of newer unrelated context", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Smart Retrieval Notes",
+        summary: "Context retrieval ranking details.",
+        content_md: "# Smart Retrieval Notes\n\nUse partial intent terms for ranking.",
+        content_hash: "sha256:retrieval",
+        source_workstream: "backend",
+        target_workstreams: ["backend"],
+        domain: "retrieval",
+        code_areas: ["context-search"],
+        context_type: "implementation_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Newest Unrelated Upload",
+        summary: "Recent deploy housekeeping.",
+        content_md: "# Newest Unrelated Upload",
+        content_hash: "sha256:newest",
+        source_workstream: "docs",
+        target_workstreams: ["docs"],
+        domain: "release",
+        code_areas: ["deploy"],
+        context_type: "implementation_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:09:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        intent: "retrieval pagination webhook",
+        mode: "smart",
+        limit: 2
+      },
+      { id: userId }
+    );
+
+    expect(contexts.map((context) => context.title)).toEqual([
+      "Smart Retrieval Notes",
+      "Newest Unrelated Upload"
+    ]);
+    expect(contexts[0]).toMatchObject({
+      match_kind: "full_text",
+      match_reason: expect.stringContaining("one or more intent terms")
+    });
+  });
+
+  it("matches smart retrieval intent against author notes", async () => {
+    const tables = baseTables();
+    tables.contexts.push(
+      {
+        id: contextId,
+        org_id: orgId,
+        project_id: projectId,
+        title: "Checkout Context",
+        summary: "Checkout implementation details.",
+        content_md: "# Checkout Context",
+        content_hash: "sha256:checkout",
+        source_workstream: "frontend",
+        target_workstreams: ["backend"],
+        domain: "checkout",
+        code_areas: ["session"],
+        context_type: "implementation_note",
+        priority: "normal",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        author_note_md: "Canonical webhook handoff for payment settlement.",
+        author_note_source: "agent_inferred",
+        author_note_updated_at: createdAt,
+        author_note_updated_by: userId,
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:01:00.000Z",
+        version: 1
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        org_id: orgId,
+        project_id: projectId,
+        title: "Newest Unrelated Upload",
+        summary: "Recent deploy housekeeping.",
+        content_md: "# Newest Unrelated Upload",
+        content_hash: "sha256:newest",
+        source_workstream: "docs",
+        target_workstreams: ["docs"],
+        domain: "release",
+        code_areas: ["deploy"],
+        context_type: "implementation_note",
+        priority: "low",
+        status: "active",
+        repo_paths: [],
+        related_files: [],
+        tags: [],
+        created_by: userId,
+        created_at: "2026-05-16T12:00:00.000Z",
+        updated_at: "2026-05-16T12:09:00.000Z",
+        version: 1
+      }
+    );
+    const repo = new SupabaseContextRepository(createFakeSupabase(tables));
+
+    const contexts = await repo.retrieveContext(
+      {
+        project_id: projectId,
+        intent: "webhook settlement",
+        mode: "smart",
+        limit: 2
+      },
+      { id: userId }
+    );
+
+    expect(contexts[0]).toMatchObject({
+      title: "Checkout Context",
+      author_note_md: "Canonical webhook handoff for payment settlement.",
+      author_note_source: "agent_inferred",
+      match_kind: "full_text"
+    });
   });
 
   it("uses smart routing hints as boosts instead of filters", async () => {

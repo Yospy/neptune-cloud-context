@@ -11,7 +11,7 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 ```text
 packages/cli
 package name: neptune-context-cli
-version: 0.1.11
+version: 0.1.13
 binary: neptune
 language: TypeScript
 distribution: npm
@@ -36,6 +36,7 @@ neptune project list
 neptune create project <name> <org-name-or-slug>
 neptune project create <name> <org-name-or-slug>
 neptune project bind <project|org/project>
+neptune project checkout <project>
 neptune project delete <project|org/project>
 neptune project current
 neptune project unbind
@@ -63,6 +64,7 @@ projects
 project create
 project list
 project bind
+project checkout
 project delete
 project current
 project unbind
@@ -104,6 +106,16 @@ neptune project bind api
 neptune current
 ```
 
+Switch the current directory to another project in the selected org:
+
+```bash
+neptune org use acme
+neptune project checkout website
+neptune current
+```
+
+`project checkout` only changes the Neptune project binding for the current directory. It does not run Git checkout, does not accept `org/project`, and does not accept `--org`.
+
 Explicit flow without relying on the default org:
 
 ```bash
@@ -127,6 +139,12 @@ Changing the directory binding is just another bind:
 ```bash
 neptune project bind another-project
 neptune project bind acme/another-project
+```
+
+For default-org-only switching, use checkout:
+
+```bash
+neptune project checkout another-project
 ```
 
 Delete a project:

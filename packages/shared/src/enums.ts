@@ -33,7 +33,10 @@ export const contextStatusValues = [
 
 export const priorityValues = ["low", "normal", "high", "blocking"] as const;
 
+export const authorNoteSourceValues = ["manual", "agent_inferred"] as const;
+
 export type Workstream = (typeof workstreamValues)[number];
 export type ContextType = (typeof contextTypeValues)[number];
 export type ContextStatus = (typeof contextStatusValues)[number];
 export type Priority = (typeof priorityValues)[number];
+export type AuthorNoteSource = (typeof authorNoteSourceValues)[number];
