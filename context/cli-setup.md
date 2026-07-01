@@ -11,12 +11,13 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 ```text
 packages/cli
 package name: @yash_1008/neptune
-version: 0.1.13
+version: 0.1.14
 binary: neptune
 language: TypeScript
 distribution: npm
 global install: npm install -g @yash_1008/neptune@latest
 npx install: npx -y @yash_1008/neptune@latest install
+publish: corepack pnpm publish --access public --registry=https://registry.npmjs.org/
 ```
 
 ## Commands

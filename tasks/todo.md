@@ -2,13 +2,20 @@
 
 ## Active Sprint
 
-`sprints/2026-07-01-scoped-neptune-cli-package.md`
+`sprints/2026-07-01-cli-pnpm-publish-fix.md`
 
 ## Previous Sprint
 
-`sprints/2026-06-30-neptune-cli-install.md`
+`sprints/2026-07-01-scoped-neptune-cli-package.md`
 
 ## Tasks
+
+- [x] Create CLI pnpm publish fix sprint plan.
+- [x] Bump CLI package/docs to 0.1.14.
+- [x] Update publish command guidance to pnpm publish.
+- [x] Verify packed metadata rewrites workspace dependencies.
+- [x] Run focused and workspace verification.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create scoped Neptune CLI package sprint plan.
 - [x] Rename CLI npm package to @yash_1008/neptune.

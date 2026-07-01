@@ -60,4 +60,4 @@ Out of scope:
 - Root cause: npm rejected the unscoped `neptune` package name as too similar to an existing `Neptune` package.
 - Minimality: only `packages/cli` package metadata and install/publish docs changed.
 - Compatibility: installed executable remains `neptune`; users run `neptune install` after installing the scoped package.
-- Publish command: from `packages/cli`, run `npm publish --access public --registry=https://registry.npmjs.org/`.
+- Publish command: from `packages/cli`, run `corepack pnpm publish --access public --registry=https://registry.npmjs.org/` so workspace dependencies are rewritten.
