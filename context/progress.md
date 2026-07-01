@@ -1,12 +1,12 @@
 # Progress Snapshot
 
-Updated: 2026-06-30
+Updated: 2026-07-01
 
 ## Current State
 
 ```text
 Backend: running locally on http://127.0.0.1:8787
-CLI: neptune@0.1.13
+CLI: @yash_1008/neptune@0.1.13
 SDK: neptune-context@0.1.10
 Shared package: neptune-context-shared@0.1.7
 MCP: neptune-context-mcp@0.1.8, stdio transport
@@ -42,7 +42,7 @@ MCP package with exact 6 context-work tools
 OpenAI sample.py chat-style MCP tester
 npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
-CLI package rename/public metadata: neptune@0.1.13
+CLI package scoped public metadata: @yash_1008/neptune@0.1.13
 neptune mcp install --target codex|claude|all with --dry-run
 neptune install with flags/prompts for first-user onboarding
 neptune doctor diagnostics for local install health
@@ -58,7 +58,7 @@ corepack pnpm --filter neptune-context-shared test passed, 29 tests
 corepack pnpm --filter @neptune/backend test       passed, 71 tests plus 1 skipped integration
 corepack pnpm --filter neptune-context test        passed, 32 tests
 corepack pnpm --filter neptune-context-mcp test    passed, 27 tests
-corepack pnpm --filter neptune test                passed, 48 tests
+corepack pnpm --filter @yash_1008/neptune test     passed, 50 tests
 corepack pnpm typecheck                           passed
 corepack pnpm test                                passed
 corepack pnpm build                               passed
@@ -125,7 +125,7 @@ Publish/final install verification:
 neptune-context-shared@0.1.7  release target
 neptune-context@0.1.10        release target
 neptune-context-mcp@0.1.8     release target
-neptune@0.1.13                release target
+@yash_1008/neptune@0.1.13     release target
 fresh npm install             not yet rerun for author-note release
 neptune --help                not yet rerun for author-note release
 neptune mcp install dry-run   not yet rerun for author-note release
