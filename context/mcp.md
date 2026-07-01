@@ -187,8 +187,8 @@ Duplicate org/project slug edge cases are verified through MCP and now propagate
 
 ```toml
 [mcp_servers.neptune]
-command = "npx"
-args = ["-y", "neptune-context-mcp"]
+command = "neptune"
+args = ["mcp", "serve"]
 
 [mcp_servers.neptune.env]
 NEPTUNE_API_URL = "https://abc123.ngrok-free.app"
@@ -202,7 +202,7 @@ NEPTUNE_API_URL = "https://abc123.ngrok-free.app"
 claude mcp remove -s user neptune
 claude mcp add --transport stdio --scope user neptune \
   -e NEPTUNE_API_URL=http://127.0.0.1:8787 \
-  -- npx -y neptune-context-mcp
+  -- neptune mcp serve
 ```
 
 Check in Claude Code:
@@ -225,6 +225,6 @@ resolved contexts are excluded from active relevant results
 duplicate org/project slugs return CONFLICT 409 through MCP
 sample.py can let an OpenAI model call MCP tools
 neptune mcp install dry-run and packed clean install smoke passed
-neptune install/setup and neptune doctor are implemented locally
+npm install starts setup; internal setup recovery commands and neptune doctor are implemented locally
 local MCP stdio tools/list passes with /opt/homebrew/bin/node
 ```

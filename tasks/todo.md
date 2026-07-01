@@ -2,13 +2,23 @@
 
 ## Active Sprint
 
-`sprints/2026-07-01-restore-neptune-context-cli-package.md`
+`sprints/2026-07-01-single-package-install-setup.md`
 
 ## Previous Sprint
 
-`sprints/2026-07-01-cli-pnpm-publish-fix.md`
+`sprints/2026-07-01-restore-neptune-context-cli-package.md`
 
 ## Tasks
+
+- [x] Create single package install setup sprint plan.
+- [x] Add MCP runtime dependency to CLI package.
+- [x] Add hidden CLI MCP server command.
+- [x] Repoint MCP config and doctor probe to installed CLI.
+- [x] Add global npm postinstall setup launcher.
+- [x] Update tests and current docs.
+- [x] Verify package artifact and workspace checks.
+- [x] Review diff, side effects, and publish command.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create restore neptune-context-cli package sprint plan.
 - [x] Rename CLI npm package back to neptune-context-cli.

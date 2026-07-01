@@ -51,7 +51,7 @@ neptune mcp install --target codex
 One-command setup:
 
 ```bash
-neptune install
+npm install -g neptune-context-cli@latest
 neptune doctor
 ```
 

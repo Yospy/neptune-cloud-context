@@ -5,7 +5,7 @@
 Current implemented flow:
 
 ```text
-User runs neptune login
+User runs npm install -g neptune-context-cli@latest
   |
   v
 CLI logs in user with GitHub OAuth through Supabase
@@ -14,16 +14,16 @@ CLI logs in user with GitHub OAuth through Supabase
 CLI stores session in ~/.neptune/config.json
   |
   v
-User can create/list orgs and projects
+User selects or creates org/project
   |
   v
-User runs neptune mcp install for Codex and/or Claude Code
+CLI binds the repo and installs MCP for Codex and/or Claude Code
 ```
 
 Implemented setup flow:
 
 ```text
-User runs neptune install
+User runs npm install -g neptune-context-cli@latest
   |
   v
 CLI logs in user
@@ -70,7 +70,7 @@ Status: planned. Org/project creation exists, but domain auto-join and invites a
 ```text
 Admin
   |
-  | neptune install
+  | npm install -g neptune-context-cli@latest
   | create org acme with domain acme.com
   | create project checkout
   v
@@ -100,7 +100,7 @@ Status: implemented for login, org creation, project creation, MCP install, and 
 ```text
 Developer
   |
-  | neptune install
+  | npm install -g neptune-context-cli@latest
   | create personal org
   | create project myapp
   v
@@ -147,7 +147,7 @@ Agent shows receipt to user
 
 ## Fetch Flow
 
-Status: backend endpoint, SDK wrapper, MCP wrapper, SDK repo binding helpers, `neptune mcp install`, `neptune install`/`neptune setup`, and `neptune doctor` are implemented locally.
+Status: backend endpoint, SDK wrapper, MCP wrapper, SDK repo binding helpers, npm-install setup, `neptune mcp install`, internal setup recovery, and `neptune doctor` are implemented locally.
 
 ```text
 User says: I am working on backend auth. Check relevant context.
@@ -202,7 +202,7 @@ User runs neptune mcp install --target codex
 CLI writes ~/.codex/config.toml Neptune MCP server entry
   |
   v
-Codex starts neptune-context-mcp with npx
+Codex starts the bundled MCP runtime with `neptune mcp serve`
   |
   v
 MCP reads ~/.neptune/config.json through SDK

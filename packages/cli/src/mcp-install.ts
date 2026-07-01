@@ -32,8 +32,8 @@ function tomlString(value: string) {
 function renderCodexNeptuneSection(apiUrl: string) {
   return [
     "[mcp_servers.neptune]",
-    "command = \"npx\"",
-    "args = [\"-y\", \"neptune-context-mcp\"]",
+    "command = \"neptune\"",
+    "args = [\"mcp\", \"serve\"]",
     "",
     "[mcp_servers.neptune.env]",
     `NEPTUNE_API_URL = ${tomlString(apiUrl)}`,
@@ -144,9 +144,9 @@ function claudeAddArgs(apiUrl: string) {
     "-e",
     `NEPTUNE_API_URL=${apiUrl}`,
     "--",
-    "npx",
-    "-y",
-    "neptune-context-mcp"
+    "neptune",
+    "mcp",
+    "serve"
   ];
 }
 

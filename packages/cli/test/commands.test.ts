@@ -26,9 +26,21 @@ describe("CLI commands", () => {
 
     expect(code).toBe(0);
     expect(stdout.value()).toContain("neptune mcp install");
-    expect(stdout.value()).toContain("neptune install");
-    expect(stdout.value()).toContain("neptune setup");
     expect(stdout.value()).toContain("neptune doctor");
+    expect(stdout.value()).not.toContain("neptune install");
+    expect(stdout.value()).not.toContain("neptune setup");
+  });
+
+  it("packages the complete local Neptune runtime under one npm package", async () => {
+    const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+
+    expect(pkg.name).toBe("neptune-context-cli");
+    expect(pkg.bin.neptune).toBe("./dist/index.js");
+    expect(pkg.files).toContain("postinstall.cjs");
+    expect(pkg.scripts.postinstall).toBe("node postinstall.cjs");
+    expect(pkg.dependencies).toMatchObject({
+      "neptune-context-mcp": "workspace:^"
+    });
   });
 
   it("stores login session without printing tokens", async () => {
@@ -1615,8 +1627,8 @@ describe("CLI commands", () => {
       expect(second).toContain('model = "gpt-5.5"');
       expect(second).toContain("[mcp_servers.context7]");
       expect(second).toContain("[features]");
-      expect(second).toContain('command = "npx"');
-      expect(second).toContain('args = ["-y", "neptune-context-mcp"]');
+      expect(second).toContain('command = "neptune"');
+      expect(second).toContain('args = ["mcp", "serve"]');
       expect(second).toContain('NEPTUNE_API_URL = "https://neptune.example.com"');
       expect(second).not.toContain('command = "old"');
       expect(second.match(/\[mcp_servers\.neptune\]/g)).toHaveLength(1);
@@ -1649,9 +1661,9 @@ describe("CLI commands", () => {
       "-e",
       "NEPTUNE_API_URL=https://neptune.example.com",
       "--",
-      "npx",
-      "-y",
-      "neptune-context-mcp"
+      "neptune",
+      "mcp",
+      "serve"
     ]);
   });
 
@@ -1900,7 +1912,7 @@ describe("CLI commands", () => {
         project_slug: "checkout",
         default_workstream: "backend"
       });
-      expect(await readFile(codexConfigPath, "utf8")).toContain("neptune-context-mcp");
+      expect(await readFile(codexConfigPath, "utf8")).toContain('args = ["mcp", "serve"]');
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -2103,7 +2115,7 @@ describe("CLI commands", () => {
       );
       await writeFile(
         codexConfigPath,
-        '[mcp_servers.neptune]\ncommand = "npx"\nargs = ["-y", "neptune-context-mcp"]\n'
+        '[mcp_servers.neptune]\ncommand = "neptune"\nargs = ["mcp", "serve"]\n'
       );
 
       const code = await runCli(["doctor", "--target", "codex"], {
