@@ -13,7 +13,7 @@ packages/backend/   Self-hosted TypeScript backend API
 packages/shared/    Shared schemas and TypeScript types
 packages/sdk/       Published SDK: neptune-context
 packages/mcp/       Published MCP server: neptune-context-mcp
-packages/cli/       Published CLI: neptune-context-cli
+packages/cli/       Published CLI: neptune
 supabase/           Database migrations
 context/            Architecture and implementation notes
 sample.py           OpenAI Responses API + MCP smoke test
@@ -22,10 +22,10 @@ sample.py           OpenAI Responses API + MCP smoke test
 Published npm packages:
 
 ```text
-neptune-context-shared  0.1.4
-neptune-context         0.1.6
-neptune-context-mcp     0.1.6
-neptune-context-cli     0.1.9
+neptune-context-shared  0.1.7
+neptune-context         0.1.10
+neptune-context-mcp     0.1.8
+neptune                 0.1.13
 ```
 
 ## Architecture
@@ -114,7 +114,7 @@ Expected:
 Install the published CLI:
 
 ```bash
-npm install -g neptune-context-cli
+npm install -g neptune@latest
 ```
 
 Point the CLI and MCP server at your backend:
@@ -127,7 +127,7 @@ Login and configure Codex/Claude Code:
 
 ```bash
 neptune login
-neptune setup --target all
+neptune install --target all
 neptune doctor --target all
 ```
 
@@ -241,7 +241,7 @@ Package-specific examples:
 corepack pnpm --filter @neptune/backend test
 corepack pnpm --filter neptune-context test
 corepack pnpm --filter neptune-context-mcp test
-corepack pnpm --filter neptune-context-cli test
+corepack pnpm --filter neptune test
 ```
 
 Run the OpenAI/MCP smoke sample:

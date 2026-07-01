@@ -31,6 +31,7 @@ export type SetupDeps = {
   execFile?: ExecFileLike;
   cwd?: string;
   prompt?: PromptLike;
+  commandName?: "install" | "setup";
 };
 
 function writeLine(stream: WritableStream, value = "") {
@@ -120,6 +121,7 @@ async function ensureLogin(deps: SetupDeps, apiUrlOverride?: string) {
 export async function runSetup(args: string[], deps: SetupDeps = {}): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const prompt = deps.prompt ?? defaultPrompt;
+  const commandName = deps.commandName ?? "setup";
   const apiUrl = flagValue(args, "--api-url");
   const runDeps = apiUrl ? { ...deps, env: { ...deps.env, NEPTUNE_API_URL: apiUrl } } : deps;
   const targetInput = flagValue(args, "--target");
@@ -127,7 +129,7 @@ export async function runSetup(args: string[], deps: SetupDeps = {}): Promise<nu
   const workstreamInput = flagValue(args, "--workstream") ?? "general";
 
   if (!isTarget(target)) {
-    throw new Error("Usage: neptune setup [--api-url <url>] [--org <slug>] [--project <slug>] [--workstream <workstream>] [--target codex|claude|all]");
+    throw new Error(`Usage: neptune ${commandName} [--api-url <url>] [--org <slug>] [--project <slug>] [--workstream <workstream>] [--target codex|claude|all]`);
   }
 
   if (!isWorkstream(workstreamInput)) {

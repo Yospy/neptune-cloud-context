@@ -26,6 +26,7 @@ describe("CLI commands", () => {
 
     expect(code).toBe(0);
     expect(stdout.value()).toContain("neptune mcp install");
+    expect(stdout.value()).toContain("neptune install");
     expect(stdout.value()).toContain("neptune setup");
     expect(stdout.value()).toContain("neptune doctor");
   });
@@ -1784,6 +1785,127 @@ describe("CLI commands", () => {
     }
   });
 
+  it("install aliases setup for first-time configuration", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
+    const configPath = join(dir, "home", ".neptune", "config.json");
+    const codexConfigPath = join(dir, "home", ".codex", "config.toml");
+    const cwd = join(dir, "repo");
+    const stdout = stream();
+    const login = vi.fn(async () => ({
+      accessToken: "secret-access-token",
+      refreshToken: "secret-refresh-token",
+      expiresAt: 1800000000,
+      tokenType: "bearer",
+      user: { id: "user-1", email: "user@example.com" }
+    }));
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            user: {
+              id: "user-1",
+              email: "user@example.com",
+              display_name: null,
+              avatar_url: null,
+              provider: "github",
+              last_seen_at: null,
+              created_at: "2026-05-19T00:00:00.000Z",
+              updated_at: "2026-05-19T00:00:00.000Z"
+            },
+            orgs: [],
+            projects: []
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true, orgs: [] })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            org: {
+              id: "11111111-1111-4111-8111-111111111111",
+              slug: "acme",
+              name: "Acme",
+              role: "owner",
+              created_at: "2026-05-19T00:00:00.000Z"
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true, projects: [] })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            ok: true,
+            project: {
+              id: "22222222-2222-4222-8222-222222222222",
+              org_id: "11111111-1111-4111-8111-111111111111",
+              slug: "checkout",
+              name: "Checkout",
+              role: "admin",
+              default_workstream: "backend",
+              created_at: "2026-05-19T00:00:00.000Z"
+            }
+          })
+      });
+
+    try {
+      await mkdir(cwd, { recursive: true });
+      const code = await runCli(
+        [
+          "install",
+          "--org",
+          "acme",
+          "--project",
+          "checkout",
+          "--workstream",
+          "backend",
+          "--target",
+          "codex",
+          "--api-url",
+          "https://neptune.example.com"
+        ],
+        {
+          configPath,
+          codexConfigPath,
+          cwd,
+          stdout,
+          fetch,
+          login,
+          env: {
+            NEPTUNE_SUPABASE_URL: "https://supabase.example.com",
+            NEPTUNE_SUPABASE_ANON_KEY: "anon"
+          }
+        }
+      );
+
+      expect(code).toBe(0);
+      expect(stdout.value()).toContain("Setup complete.");
+      expect(JSON.parse(await readFile(join(cwd, ".neptune", "config.json"), "utf8"))).toMatchObject({
+        org_slug: "acme",
+        project_slug: "checkout",
+        default_workstream: "backend"
+      });
+      expect(await readFile(codexConfigPath, "utf8")).toContain("neptune-context-mcp");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("setup logs in and creates missing org and project from flags", async () => {
     const dir = await mkdtemp(join(tmpdir(), "neptune-cli-"));
     const configPath = join(dir, "home", ".neptune", "config.json");
@@ -1913,6 +2035,14 @@ describe("CLI commands", () => {
     expect(badWorkstream).toBe(1);
     expect(stderr.value()).toContain("Usage: neptune setup");
     expect(stderr.value()).toContain("Invalid workstream: sales");
+  });
+
+  it("install rejects invalid target with install usage", async () => {
+    const stderr = stream();
+    const code = await runCli(["install", "--target", "vim"], { stderr });
+
+    expect(code).toBe(1);
+    expect(stderr.value()).toContain("Usage: neptune install");
   });
 
   it("doctor passes with healthy config, binding, Codex config, and MCP probe", async () => {

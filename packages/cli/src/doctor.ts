@@ -171,7 +171,7 @@ export async function runDoctor(args: string[], deps: DoctorDeps = {}): Promise<
   checks.push(await captureCheck("node", () => assertNodeVersion(deps.nodeVersion ?? process.versions.node)));
   checks.push(
     await captureCheck("auth", () => {
-      if (!stored.auth?.accessToken) throw new Error("Not logged in. Run `neptune login` or `neptune setup`.");
+      if (!stored.auth?.accessToken) throw new Error("Not logged in. Run `neptune login` or `neptune install`.");
       return `logged in as ${stored.auth.user.email ?? stored.auth.user.id}`;
     })
   );
@@ -189,7 +189,7 @@ export async function runDoctor(args: string[], deps: DoctorDeps = {}): Promise<
   checks.push(
     await captureCheck("repo binding", async () => {
       const binding = await loadProjectBinding(deps.cwd);
-      if (!binding) throw new Error("Current repo is not bound. Run `neptune setup`.");
+      if (!binding) throw new Error("Current repo is not bound. Run `neptune install`.");
       return `${binding.org_slug}/${binding.project_slug}`;
     })
   );
