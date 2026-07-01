@@ -41,7 +41,7 @@ implemented:
   public npm package neptune-context-shared@0.1.7
   public npm package neptune-context@0.1.10
   public npm package neptune-context-mcp@0.1.8 with 6 context-work tools
-  public npm package @yash_1008/neptune@0.1.14 with neptune binary
+  public npm package neptune-context-cli@0.1.14 with neptune binary
   neptune mcp install for Codex and Claude Code
   neptune install for login/org/project/repo binding/MCP install
   neptune doctor for local install diagnostics
@@ -68,7 +68,7 @@ corepack pnpm --filter neptune-context-shared test passed, 29 tests
 corepack pnpm --filter @neptune/backend test       passed, 71 tests plus 1 skipped integration
 corepack pnpm --filter neptune-context test        passed, 32 tests
 corepack pnpm --filter neptune-context-mcp test    passed, 27 tests
-corepack pnpm --filter @yash_1008/neptune test     passed, 50 tests
+corepack pnpm --filter neptune-context-cli test     passed, 50 tests
 corepack pnpm typecheck                            passed
 corepack pnpm test                                 passed
 corepack pnpm build                                passed

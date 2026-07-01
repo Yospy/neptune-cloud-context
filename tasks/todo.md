@@ -2,13 +2,21 @@
 
 ## Active Sprint
 
-`sprints/2026-07-01-cli-pnpm-publish-fix.md`
+`sprints/2026-07-01-restore-neptune-context-cli-package.md`
 
 ## Previous Sprint
 
-`sprints/2026-07-01-scoped-neptune-cli-package.md`
+`sprints/2026-07-01-cli-pnpm-publish-fix.md`
 
 ## Tasks
+
+- [x] Create restore neptune-context-cli package sprint plan.
+- [x] Rename CLI npm package back to neptune-context-cli.
+- [x] Update current install and publish docs.
+- [x] Remove stale current personal-scope install guidance.
+- [x] Verify packed metadata and workspace checks.
+- [x] Review diff, side effects, and publish command.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create CLI pnpm publish fix sprint plan.
 - [x] Bump CLI package/docs to 0.1.14.
