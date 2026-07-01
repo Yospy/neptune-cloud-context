@@ -60,6 +60,9 @@ importers:
       neptune-context:
         specifier: workspace:^
         version: link:../sdk
+      neptune-context-mcp:
+        specifier: workspace:^
+        version: link:../mcp
       neptune-context-shared:
         specifier: workspace:^
         version: link:../shared

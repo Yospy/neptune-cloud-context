@@ -111,29 +111,21 @@ Expected:
 
 ## CLI Setup
 
-Install the published CLI:
-
-```bash
-npm install -g neptune-context-cli@latest
-```
-
-Or run the installer without a global install:
-
-```bash
-npx -y neptune-context-cli@latest install --target all
-```
-
-Point the CLI and MCP server at your backend:
+Point the CLI and MCP server at your backend before installation:
 
 ```bash
 export NEPTUNE_API_URL="http://127.0.0.1:8787"
 ```
 
-Login and configure Codex/Claude Code:
+Install the published CLI and start setup:
 
 ```bash
-neptune login
-neptune install --target all
+npm install -g neptune-context-cli@latest
+```
+
+The install lifecycle starts Neptune setup from the directory where you ran npm. It logs in, selects or creates the org/project, writes the repo binding, and installs MCP config. Verify after setup:
+
+```bash
 neptune doctor --target all
 ```
 
@@ -145,17 +137,17 @@ neptune orgs
 neptune create org "Acme Tools"
 neptune projects
 neptune create project "Checkout" "Acme Tools"
-neptune mcp install --target all
+neptune doctor --target all
 ```
 
 Invite commands are not implemented yet.
 
 ## MCP Server
 
-Codex and Claude Code use the published MCP server:
+Codex and Claude Code use the MCP server carried by the installed CLI package:
 
 ```bash
-npx -y neptune-context-mcp
+neptune mcp serve
 ```
 
 The MCP surface is intentionally small:
@@ -176,7 +168,7 @@ printf '%s\n%s\n%s\n' \
 '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"probe","version":"0.0.0"}}}' \
 '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}' \
 '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-| npx -y neptune-context-mcp | grep project_index
+| neptune mcp serve | grep project_index
 ```
 
 ## Project Index

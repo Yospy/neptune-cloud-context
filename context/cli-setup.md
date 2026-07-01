@@ -15,8 +15,7 @@ version: 0.1.14
 binary: neptune
 language: TypeScript
 distribution: npm
-global install: npm install -g neptune-context-cli@latest
-npx install: npx -y neptune-context-cli@latest install
+global install and setup: npm install -g neptune-context-cli@latest
 publish: corepack pnpm publish --access public --registry=https://registry.npmjs.org/
 ```
 
@@ -45,8 +44,6 @@ neptune project current
 neptune project unbind
 neptune project members
 neptune mcp install
-neptune install
-neptune setup
 neptune doctor
 neptune logout
 ```
@@ -74,8 +71,6 @@ project current
 project unbind
 project members
 mcp install
-install
-setup
 doctor
 ```
 
@@ -85,7 +80,7 @@ Planned later:
 invite commands
 ```
 
-Repo binding helpers exist in the SDK. `neptune install` writes `.neptune/config.json` for the current repo. `neptune setup` remains a compatibility alias.
+Repo binding helpers exist in the SDK. Global npm install starts setup and writes `.neptune/config.json` for the directory where npm was invoked. Internal setup commands remain available for recovery, but the documented user setup entrypoint is npm install.
 
 ## Org and Project Binding
 
@@ -248,18 +243,18 @@ http://127.0.0.1:8787
 
 ## Install Flow
 
-Status: implemented locally.
+Status: implemented locally and started by global npm install.
 
-Flags:
+Run from the repo directory to bind:
 
 ```bash
-neptune install --api-url http://127.0.0.1:8787 --org acme --project checkout --workstream backend --target codex
+npm install -g neptune-context-cli@latest
 ```
 
-If flags are omitted, the CLI prompts for missing org, project, workstream, and MCP target values. The target prompt defaults to `codex`.
+The install lifecycle prompts for missing org, project, workstream, and MCP target values. The target prompt defaults to `codex`.
 
 ```text
-neptune install
+npm install -g neptune-context-cli@latest
   |
   v
 opens login flow or accepts token
@@ -302,7 +297,7 @@ with:
 Status: planned. Org/project creation exists, but allowed-domain auto-join is not implemented yet.
 
 ```bash
-neptune install
+npm install -g neptune-context-cli@latest
 ```
 
 User with `yash@acme.com` can create:
@@ -339,8 +334,8 @@ Expected config:
 
 ```toml
 [mcp_servers.neptune]
-command = "npx"
-args = ["-y", "neptune-context-mcp"]
+command = "neptune"
+args = ["mcp", "serve"]
 
 [mcp_servers.neptune.env]
 NEPTUNE_API_URL = "http://127.0.0.1:8787"
@@ -364,7 +359,7 @@ The CLI runs the equivalent of:
 claude mcp remove -s user neptune
 claude mcp add --transport stdio --scope user neptune \
   -e NEPTUNE_API_URL=http://127.0.0.1:8787 \
-  -- npx -y neptune-context-mcp
+  -- neptune mcp serve
 ```
 
 Implemented command:

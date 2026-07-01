@@ -11,7 +11,7 @@ SDK: neptune-context@0.1.10
 Shared package: neptune-context-shared@0.1.7
 MCP: neptune-context-mcp@0.1.8, stdio transport
 Installer: neptune mcp install for Codex and Claude Code
-Setup: neptune install for login/org/project/repo binding/MCP install
+Setup: npm install -g neptune-context-cli@latest starts login/org/project/repo binding/MCP setup
 Doctor: neptune doctor for Node/auth/backend/binding/MCP checks
 Sample bridge: sample.py using OpenAI Responses API + MCP tools
 ```
@@ -44,7 +44,7 @@ npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
 CLI package restored to public metadata: neptune-context-cli@0.1.14
 neptune mcp install --target codex|claude|all with --dry-run
-neptune install with flags/prompts for first-user onboarding
+npm install setup with prompts for first-user onboarding; internal setup commands retained for recovery
 neptune doctor diagnostics for local install health
 neptune org/project binding commands and project deletion
 smart context retrieval through GET /contexts/retrieve and MCP retrieve_context
@@ -86,7 +86,7 @@ First-user V1 live regression confirmed:
 GET /health via backend 8787                       200 OK
 CLI auth status                                    logged in as yashwadgave1008@gmail.com
 CLI me                                             user affeda20-1095-4e6c-9506-17bd7c0720dd, 14 orgs, 13 projects
-isolated neptune install/setup with temp config/repo passed
+isolated npm-install setup with temp config/repo passed
 isolated neptune doctor --target codex             passed
 MCP stdio tools/list                               5 tools after 2026-05-21 reduction
 MCP require/list/get/create/reference              source tests passed
@@ -201,7 +201,7 @@ Publish the installable packages, then run registry and app-level E2E:
 
 ```text
 1. keep README and context docs aligned with published package behavior
-2. run clean-machine neptune install and neptune doctor after DB resets
+2. run clean-machine npm install setup and neptune doctor after DB resets
 3. verify Neptune MCP tools inside Codex and Claude Code
 4. implement invite creation/acceptance
 ```

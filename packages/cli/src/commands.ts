@@ -24,6 +24,7 @@ import { loginWithGitHub } from "./auth.js";
 import { runDoctor } from "./doctor.js";
 import { loadCliDotEnv } from "./env.js";
 import { installMcp, type ExecFileLike, type McpInstallTarget } from "./mcp-install.js";
+import { runMcpServe } from "./mcp-serve.js";
 import { runSetup, type PromptLike } from "./setup.js";
 
 type CliDeps = {
@@ -136,8 +137,6 @@ function printHelp(stdout: Pick<NodeJS.WriteStream, "write">) {
   writeLine(stdout, "  neptune project unbind");
   writeLine(stdout, "  neptune project members [--project <project-id>]");
   writeLine(stdout, "  neptune mcp install [--target codex|claude|all] [--api-url <url>] [--dry-run]");
-  writeLine(stdout, "  neptune install [--api-url <url>] [--org <slug>] [--project <slug>] [--workstream <workstream>] [--target codex|claude|all]");
-  writeLine(stdout, "  neptune setup [same options as install]");
   writeLine(stdout, "  neptune doctor [--target codex|claude|all] [--api-url <url>]");
 }
 
@@ -282,9 +281,10 @@ async function findProjectForBinding(target: string, orgInput: string | undefine
 export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
+  const setupCwd = deps.cwd ?? deps.env?.NEPTUNE_SETUP_CWD ?? process.env.NEPTUNE_SETUP_CWD;
 
   try {
-    loadCliDotEnv();
+    loadCliDotEnv(setupCwd);
     const [command, subcommand, ...rest] = argv;
 
     if (!command || command === "help" || command === "--help" || command === "-h") {
@@ -597,6 +597,10 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number
       return 0;
     }
 
+    if (command === "mcp" && subcommand === "serve") {
+      return await runMcpServe();
+    }
+
     if (command === "install" || command === "setup") {
       return await runSetup([subcommand, ...rest].filter(Boolean), {
         configPath: deps.configPath,
@@ -606,7 +610,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number
         login: deps.login,
         codexConfigPath: deps.codexConfigPath,
         execFile: deps.execFile,
-        cwd: deps.cwd,
+        cwd: setupCwd,
         prompt: deps.prompt,
         commandName: command
       });

@@ -41,9 +41,9 @@ implemented:
   public npm package neptune-context-shared@0.1.7
   public npm package neptune-context@0.1.10
   public npm package neptune-context-mcp@0.1.8 with 6 context-work tools
-  public npm package neptune-context-cli@0.1.14 with neptune binary
+  public npm package neptune-context-cli@0.1.14 with neptune binary and MCP runtime dependency
   neptune mcp install for Codex and Claude Code
-  neptune install for login/org/project/repo binding/MCP install
+  npm install -g neptune-context-cli@latest starts login/org/project/repo binding/MCP setup
   neptune doctor for local install diagnostics
   OpenAI sample bridge in sample.py for model-driven MCP testing
   duplicate org/project slug conflicts mapped to 409 CONFLICT
@@ -58,7 +58,7 @@ Latest verified flow:
 
 ```text
 OpenAI sample.py -> Neptune MCP stdio -> neptune-context SDK -> backend HTTP -> Supabase
-neptune mcp install -> Codex/Claude MCP config -> neptune-context-mcp -> backend HTTP -> Supabase
+npm install -g neptune-context-cli@latest -> setup -> Codex/Claude MCP config -> neptune mcp serve -> backend HTTP -> Supabase
 ```
 
 Latest regression status:

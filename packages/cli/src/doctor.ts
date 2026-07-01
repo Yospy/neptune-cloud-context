@@ -66,7 +66,7 @@ async function fetchHealth(apiUrl: string, fetchLike: FetchLike = fetch) {
 async function checkCodexConfig(codexConfigPath?: string) {
   const path = codexConfigPath ?? defaultCodexConfigPath();
   const value = await readFile(path, "utf8");
-  if (!value.includes("[mcp_servers.neptune]") || !value.includes("neptune-context-mcp")) {
+  if (!value.includes("[mcp_servers.neptune]") || !value.includes('command = "neptune"')) {
     throw new Error(`Neptune MCP server is missing from ${path}.`);
   }
   return path;
@@ -90,7 +90,7 @@ async function checkClaudeConfig(execFile: ExecFileLike) {
 
 function defaultMcpProbe(apiUrl: string) {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn("npx", ["-y", "neptune-context-mcp"], {
+    const child = spawn("neptune", ["mcp", "serve"], {
       env: { ...process.env, NEPTUNE_API_URL: apiUrl },
       stdio: ["pipe", "pipe", "pipe"]
     });
@@ -171,7 +171,7 @@ export async function runDoctor(args: string[], deps: DoctorDeps = {}): Promise<
   checks.push(await captureCheck("node", () => assertNodeVersion(deps.nodeVersion ?? process.versions.node)));
   checks.push(
     await captureCheck("auth", () => {
-      if (!stored.auth?.accessToken) throw new Error("Not logged in. Run `neptune login` or `neptune install`.");
+      if (!stored.auth?.accessToken) throw new Error("Not logged in. Run `npm install -g neptune-context-cli@latest` from your repo.");
       return `logged in as ${stored.auth.user.email ?? stored.auth.user.id}`;
     })
   );
@@ -189,7 +189,7 @@ export async function runDoctor(args: string[], deps: DoctorDeps = {}): Promise<
   checks.push(
     await captureCheck("repo binding", async () => {
       const binding = await loadProjectBinding(deps.cwd);
-      if (!binding) throw new Error("Current repo is not bound. Run `neptune install`.");
+      if (!binding) throw new Error("Current repo is not bound. Run `npm install -g neptune-context-cli@latest` from your repo.");
       return `${binding.org_slug}/${binding.project_slug}`;
     })
   );
