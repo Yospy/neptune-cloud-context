@@ -2,13 +2,20 @@
 
 ## Active Sprint
 
-`sprints/2026-06-30-neptune-cli-install.md`
+`sprints/2026-07-01-scoped-neptune-cli-package.md`
 
 ## Previous Sprint
 
-`sprints/2026-06-30-author-note.md`
+`sprints/2026-06-30-neptune-cli-install.md`
 
 ## Tasks
+
+- [x] Create scoped Neptune CLI package sprint plan.
+- [x] Rename CLI npm package to @yash_1008/neptune.
+- [x] Update install and publish docs.
+- [x] Run focused and workspace verification.
+- [x] Review diff and publish instructions.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create Neptune CLI install command sprint plan.
 - [x] Rename CLI npm package to neptune.
