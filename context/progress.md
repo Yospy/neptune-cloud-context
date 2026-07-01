@@ -6,12 +6,12 @@ Updated: 2026-06-30
 
 ```text
 Backend: running locally on http://127.0.0.1:8787
-CLI: neptune-context-cli@0.1.13
+CLI: neptune@0.1.13
 SDK: neptune-context@0.1.10
 Shared package: neptune-context-shared@0.1.7
 MCP: neptune-context-mcp@0.1.8, stdio transport
 Installer: neptune mcp install for Codex and Claude Code
-Setup: neptune setup for login/org/project/repo binding/MCP install
+Setup: neptune install for login/org/project/repo binding/MCP install
 Doctor: neptune doctor for Node/auth/backend/binding/MCP checks
 Sample bridge: sample.py using OpenAI Responses API + MCP tools
 ```
@@ -42,9 +42,9 @@ MCP package with exact 6 context-work tools
 OpenAI sample.py chat-style MCP tester
 npm package rename from @yash_1008/neptune-sdk to neptune-context
 duplicate org/project slug fix: 500 INTERNAL_ERROR -> 409 CONFLICT
-CLI package rename/public metadata: neptune-context-cli@0.1.13
+CLI package rename/public metadata: neptune@0.1.13
 neptune mcp install --target codex|claude|all with --dry-run
-neptune setup with flags/prompts for first-user onboarding
+neptune install with flags/prompts for first-user onboarding
 neptune doctor diagnostics for local install health
 neptune org/project binding commands and project deletion
 smart context retrieval through GET /contexts/retrieve and MCP retrieve_context
@@ -58,7 +58,7 @@ corepack pnpm --filter neptune-context-shared test passed, 29 tests
 corepack pnpm --filter @neptune/backend test       passed, 71 tests plus 1 skipped integration
 corepack pnpm --filter neptune-context test        passed, 32 tests
 corepack pnpm --filter neptune-context-mcp test    passed, 27 tests
-corepack pnpm --filter neptune-context-cli test    passed, 48 tests
+corepack pnpm --filter neptune test                passed, 48 tests
 corepack pnpm typecheck                           passed
 corepack pnpm test                                passed
 corepack pnpm build                               passed
@@ -86,7 +86,7 @@ First-user V1 live regression confirmed:
 GET /health via backend 8787                       200 OK
 CLI auth status                                    logged in as yashwadgave1008@gmail.com
 CLI me                                             user affeda20-1095-4e6c-9506-17bd7c0720dd, 14 orgs, 13 projects
-isolated neptune setup with temp config/repo       passed
+isolated neptune install/setup with temp config/repo passed
 isolated neptune doctor --target codex             passed
 MCP stdio tools/list                               5 tools after 2026-05-21 reduction
 MCP require/list/get/create/reference              source tests passed
@@ -125,7 +125,7 @@ Publish/final install verification:
 neptune-context-shared@0.1.7  release target
 neptune-context@0.1.10        release target
 neptune-context-mcp@0.1.8     release target
-neptune-context-cli@0.1.13    release target
+neptune@0.1.13                release target
 fresh npm install             not yet rerun for author-note release
 neptune --help                not yet rerun for author-note release
 neptune mcp install dry-run   not yet rerun for author-note release
@@ -201,7 +201,7 @@ Publish the installable packages, then run registry and app-level E2E:
 
 ```text
 1. keep README and context docs aligned with published package behavior
-2. run clean-machine neptune setup and neptune doctor after DB resets
+2. run clean-machine neptune install and neptune doctor after DB resets
 3. verify Neptune MCP tools inside Codex and Claude Code
 4. implement invite creation/acceptance
 ```

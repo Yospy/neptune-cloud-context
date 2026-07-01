@@ -136,7 +136,8 @@ function printHelp(stdout: Pick<NodeJS.WriteStream, "write">) {
   writeLine(stdout, "  neptune project unbind");
   writeLine(stdout, "  neptune project members [--project <project-id>]");
   writeLine(stdout, "  neptune mcp install [--target codex|claude|all] [--api-url <url>] [--dry-run]");
-  writeLine(stdout, "  neptune setup [--api-url <url>] [--org <slug>] [--project <slug>] [--workstream <workstream>] [--target codex|claude|all]");
+  writeLine(stdout, "  neptune install [--api-url <url>] [--org <slug>] [--project <slug>] [--workstream <workstream>] [--target codex|claude|all]");
+  writeLine(stdout, "  neptune setup [same options as install]");
   writeLine(stdout, "  neptune doctor [--target codex|claude|all] [--api-url <url>]");
 }
 
@@ -596,7 +597,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number
       return 0;
     }
 
-    if (command === "setup") {
+    if (command === "install" || command === "setup") {
       return await runSetup([subcommand, ...rest].filter(Boolean), {
         configPath: deps.configPath,
         env: deps.env,
@@ -606,7 +607,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<number
         codexConfigPath: deps.codexConfigPath,
         execFile: deps.execFile,
         cwd: deps.cwd,
-        prompt: deps.prompt
+        prompt: deps.prompt,
+        commandName: command
       });
     }
 

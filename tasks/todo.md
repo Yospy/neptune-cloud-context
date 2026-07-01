@@ -2,13 +2,22 @@
 
 ## Active Sprint
 
-`sprints/2026-06-30-author-note.md`
+`sprints/2026-06-30-neptune-cli-install.md`
 
 ## Previous Sprint
 
-`sprints/2026-06-30-smart-retrieval-partial-term-ranking.md`
+`sprints/2026-06-30-author-note.md`
 
 ## Tasks
+
+- [x] Create Neptune CLI install command sprint plan.
+- [x] Rename CLI npm package to neptune.
+- [x] Add neptune install alias for setup.
+- [x] Update focused CLI tests.
+- [x] Update install docs and package naming references.
+- [x] Run focused and workspace verification.
+- [x] Run subagent review.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create author note sprint plan.
 - [x] Add Supabase author-note schema, RPC, and search migration.

@@ -51,7 +51,7 @@ neptune mcp install --target codex
 One-command setup:
 
 ```bash
-neptune setup
+neptune install
 neptune doctor
 ```
 
@@ -145,7 +145,7 @@ archive context
 Remaining distribution/setup gaps:
 
 ```text
-publish neptune-context-cli and neptune-context-mcp
+publish neptune and neptune-context-mcp
 verify published npm install path
 run clean-machine setup/doctor against published packages
 ensure Node >=20 is first on PATH for MCP runtime

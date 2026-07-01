@@ -10,7 +10,7 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 
 ```text
 packages/cli
-package name: neptune-context-cli
+package name: neptune
 version: 0.1.13
 binary: neptune
 language: TypeScript
@@ -42,6 +42,7 @@ neptune project current
 neptune project unbind
 neptune project members
 neptune mcp install
+neptune install
 neptune setup
 neptune doctor
 neptune logout
@@ -70,6 +71,7 @@ project current
 project unbind
 project members
 mcp install
+install
 setup
 doctor
 ```
@@ -80,7 +82,7 @@ Planned later:
 invite commands
 ```
 
-Repo binding helpers exist in the SDK. `neptune setup` writes `.neptune/config.json` for the current repo.
+Repo binding helpers exist in the SDK. `neptune install` writes `.neptune/config.json` for the current repo. `neptune setup` remains a compatibility alias.
 
 ## Org and Project Binding
 
@@ -241,20 +243,20 @@ stored config
 http://127.0.0.1:8787
 ```
 
-## Setup Flow
+## Install Flow
 
 Status: implemented locally.
 
 Flags:
 
 ```bash
-neptune setup --api-url http://127.0.0.1:8787 --org acme --project checkout --workstream backend --target codex
+neptune install --api-url http://127.0.0.1:8787 --org acme --project checkout --workstream backend --target codex
 ```
 
 If flags are omitted, the CLI prompts for missing org, project, workstream, and MCP target values. The target prompt defaults to `codex`.
 
 ```text
-neptune setup
+neptune install
   |
   v
 opens login flow or accepts token
@@ -297,7 +299,7 @@ with:
 Status: planned. Org/project creation exists, but allowed-domain auto-join is not implemented yet.
 
 ```bash
-neptune setup
+neptune install
 ```
 
 User with `yash@acme.com` can create:
@@ -371,7 +373,7 @@ neptune mcp install --target claude
 ## Runtime Requirement
 
 ```text
-neptune-context-cli: Node.js >=20
+neptune: Node.js >=20
 neptune-context-mcp: Node.js >=20
 ```
 

@@ -225,6 +225,6 @@ resolved contexts are excluded from active relevant results
 duplicate org/project slugs return CONFLICT 409 through MCP
 sample.py can let an OpenAI model call MCP tools
 neptune mcp install dry-run and packed clean install smoke passed
-neptune setup and neptune doctor are implemented locally
+neptune install/setup and neptune doctor are implemented locally
 local MCP stdio tools/list passes with /opt/homebrew/bin/node
 ```

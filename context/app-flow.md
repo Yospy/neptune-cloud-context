@@ -23,7 +23,7 @@ User runs neptune mcp install for Codex and/or Claude Code
 Implemented setup flow:
 
 ```text
-User runs neptune setup
+User runs neptune install
   |
   v
 CLI logs in user
@@ -70,7 +70,7 @@ Status: planned. Org/project creation exists, but domain auto-join and invites a
 ```text
 Admin
   |
-  | neptune setup
+  | neptune install
   | create org acme with domain acme.com
   | create project checkout
   v
@@ -100,7 +100,7 @@ Status: implemented for login, org creation, project creation, MCP install, and 
 ```text
 Developer
   |
-  | neptune setup
+  | neptune install
   | create personal org
   | create project myapp
   v
@@ -147,7 +147,7 @@ Agent shows receipt to user
 
 ## Fetch Flow
 
-Status: backend endpoint, SDK wrapper, MCP wrapper, SDK repo binding helpers, `neptune mcp install`, `neptune setup`, and `neptune doctor` are implemented locally.
+Status: backend endpoint, SDK wrapper, MCP wrapper, SDK repo binding helpers, `neptune mcp install`, `neptune install`/`neptune setup`, and `neptune doctor` are implemented locally.
 
 ```text
 User says: I am working on backend auth. Check relevant context.
