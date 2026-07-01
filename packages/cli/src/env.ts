@@ -16,7 +16,7 @@ export function loadCliDotEnv(cwd = process.cwd()) {
 
   for (const path of candidates) {
     if (existsSync(path)) {
-      loadDotEnvFile({ path, override: false });
+      loadDotEnvFile({ path, override: false, quiet: true });
     }
   }
 }

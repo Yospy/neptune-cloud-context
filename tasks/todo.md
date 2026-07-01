@@ -2,13 +2,20 @@
 
 ## Active Sprint
 
-`sprints/2026-07-01-neptune-context-cli-0-1-15-release.md`
+`sprints/2026-07-01-suppress-cli-dotenv-banner.md`
 
 ## Previous Sprint
 
-`sprints/2026-07-01-single-package-install-setup.md`
+`sprints/2026-07-01-neptune-context-cli-0-1-15-release.md`
 
 ## Tasks
+
+- [x] Create CLI dotenv banner suppression sprint plan.
+- [x] Suppress dotenv injection banner during CLI startup.
+- [x] Add regression coverage for quiet dotenv loading.
+- [x] Bump CLI package release target to 0.1.16.
+- [x] Verify package tests, typecheck, build, and publish dry run.
+- [x] Review diff and open PR.
 
 - [x] Create neptune-context-cli 0.1.15 release sprint plan.
 - [x] Bump CLI package release target to 0.1.15.
