@@ -15,7 +15,7 @@
 - [x] Add regression coverage for quiet dotenv loading.
 - [x] Bump CLI package release target to 0.1.16.
 - [x] Verify package tests, typecheck, build, and publish dry run.
-- [ ] Review diff and open PR.
+- [x] Review diff and open PR.
 
 - [x] Create neptune-context-cli 0.1.15 release sprint plan.
 - [x] Bump CLI package release target to 0.1.15.
