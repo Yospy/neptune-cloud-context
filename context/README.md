@@ -41,7 +41,7 @@ implemented:
   public npm package neptune-context-shared@0.1.7
   public npm package neptune-context@0.1.10
   public npm package neptune-context-mcp@0.1.8 with 6 context-work tools
-  public npm package neptune-context-cli@0.1.14 with neptune binary and MCP runtime dependency
+  public npm package neptune-context-cli@0.1.15 with neptune binary and MCP runtime dependency
   neptune mcp install for Codex and Claude Code
   npm install -g neptune-context-cli@latest starts login/org/project/repo binding/MCP setup
   neptune doctor for local install diagnostics

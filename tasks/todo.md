@@ -2,13 +2,20 @@
 
 ## Active Sprint
 
-`sprints/2026-07-01-single-package-install-setup.md`
+`sprints/2026-07-01-neptune-context-cli-0-1-15-release.md`
 
 ## Previous Sprint
 
-`sprints/2026-07-01-restore-neptune-context-cli-package.md`
+`sprints/2026-07-01-single-package-install-setup.md`
 
 ## Tasks
+
+- [x] Create neptune-context-cli 0.1.15 release sprint plan.
+- [x] Bump CLI package release target to 0.1.15.
+- [x] Update current docs/progress release references.
+- [x] Verify packed metadata and publish dry run.
+- [x] Review diff, side effects, and publish command.
+- [x] Commit, push, and open draft PR.
 
 - [x] Create single package install setup sprint plan.
 - [x] Add MCP runtime dependency to CLI package.
