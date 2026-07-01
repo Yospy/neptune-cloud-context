@@ -10,13 +10,13 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 
 ```text
 packages/cli
-package name: @yash_1008/neptune
+package name: neptune-context-cli
 version: 0.1.14
 binary: neptune
 language: TypeScript
 distribution: npm
-global install: npm install -g @yash_1008/neptune@latest
-npx install: npx -y @yash_1008/neptune@latest install
+global install: npm install -g neptune-context-cli@latest
+npx install: npx -y neptune-context-cli@latest install
 publish: corepack pnpm publish --access public --registry=https://registry.npmjs.org/
 ```
 
