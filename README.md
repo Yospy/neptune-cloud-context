@@ -25,7 +25,7 @@ Published npm packages:
 neptune-context-shared  0.1.7
 neptune-context         0.1.10
 neptune-context-mcp     0.1.8
-@yash_1008/neptune      0.1.13
+@yash_1008/neptune      0.1.14
 ```
 
 ## Architecture

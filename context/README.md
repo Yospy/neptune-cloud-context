@@ -41,7 +41,7 @@ implemented:
   public npm package neptune-context-shared@0.1.7
   public npm package neptune-context@0.1.10
   public npm package neptune-context-mcp@0.1.8 with 6 context-work tools
-  public npm package @yash_1008/neptune@0.1.13 with neptune binary
+  public npm package @yash_1008/neptune@0.1.14 with neptune binary
   neptune mcp install for Codex and Claude Code
   neptune install for login/org/project/repo binding/MCP install
   neptune doctor for local install diagnostics
