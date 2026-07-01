@@ -1,7 +1,31 @@
-import { describe, expect, it } from "vitest";
-import { requireSupabasePublicConfig, resolveCliEnv } from "../src/env.js";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { loadCliDotEnv, requireSupabasePublicConfig, resolveCliEnv } from "../src/env.js";
 
 describe("CLI env resolution", () => {
+  afterEach(() => {
+    delete process.env.NEPTUNE_DOTENV_TEST_VALUE;
+    vi.restoreAllMocks();
+  });
+
+  it("loads project dotenv files without printing dotenv's injection banner", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "neptune-cli-env-"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    try {
+      await writeFile(join(dir, ".env"), "NEPTUNE_DOTENV_TEST_VALUE=loaded\n");
+
+      loadCliDotEnv(dir);
+
+      expect(process.env.NEPTUNE_DOTENV_TEST_VALUE).toBe("loaded");
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("prefers Neptune-specific env vars over stored config", () => {
     expect(
       resolveCliEnv(

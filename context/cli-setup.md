@@ -11,7 +11,7 @@ Daily context usage happens inside Codex or Claude Code through MCP.
 ```text
 packages/cli
 package name: neptune-context-cli
-version: 0.1.15
+version: 0.1.16
 binary: neptune
 language: TypeScript
 distribution: npm
